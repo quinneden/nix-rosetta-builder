@@ -20,7 +20,7 @@
       format = "raw-efi";
       modules = [
         ./configuration.nix
-        # {
+        {
         #   imports = [
         #     (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix")
         #   ];
@@ -58,7 +58,8 @@
         #     options = ["noatime" "nodiratime" "discard"];
         #   };
 
-        # }
+          boot.kernelParams = [ "console=tty0" ];
+        }
       ];
       system = linuxSystem;
     };
