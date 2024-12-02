@@ -1,22 +1,11 @@
-arch: "aarch64"
-vmType: "vz"
-
 images:
 - location: "nixos.img"
-  arch: "aarch64"
 
 cpus: 8
 memory: "6GiB"
 disk: "50GiB"
 
 ssh:
-  localPort: 0
-
-networks:
-- vzNAT: true
-
-containerd:
-  system: false
-  user: false
+  localPort: 2226
 
 plain: true
