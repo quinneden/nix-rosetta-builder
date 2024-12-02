@@ -44,7 +44,7 @@
         #     settings.PermitRootLogin = "yes";
         #   };
 
-        #   users.users.root.password = "nixos"; # FIXME:
+          users.users.root.password = "nixos"; # FIXME:
 
         #   fileSystems."/boot" = {
         #     device = "/dev/disk/by-label/ESP"; # /dev/vda1
