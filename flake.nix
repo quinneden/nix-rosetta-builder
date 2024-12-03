@@ -18,53 +18,61 @@
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
       format = "qcow-efi";
-      modules = [
-        ./configuration.nix
-        {
-        #   imports = [
-        #     (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix")
-        #   ];
-        #   # FIXME: ?
-        #   # nix.registry.nixpkgs.flake = nixpkgs;
-        #   # virtualisation.diskSize = 10 * 1024;
-          virtualisation.rosetta = {
-            enable = true;
-            mountTag = "vz-rosetta";
-          };
+      modules = [ {
+        # imports = [ # FIXME: include?
+        #   (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix")
+        # ];
 
+        # FIXME: use?
+        # nix.registry.nixpkgs.flake = nixpkgs;
+        # virtualisation.diskSize = 10 * 1024;
 
-        #   # boot.loader = {
-        #   #   systemd-boot.enable = true; 
-        #   #   efi.canTouchEfiVariables = true;
-        #   # };
-        #   boot.loader.grub = {
-        #     device = "nodev";
-        #     efiSupport = true;
-        #     efiInstallAsRemovable = true;
-        #   };
+        # boot.loader = { # FIXME: use
+        #   systemd-boot.enable = true; 
+        #   efi.canTouchEfiVariables = true;
+        # };
+        boot.initrd.availableKernelModules = [ "xhci_pci" ];
+        boot.initrd.kernelModules = [ ];
+        boot.kernelModules = [ ];
+        boot.kernelParams = [ "console=tty0" ];
+        boot.extraModulePackages = [ ];
+        boot.loader.systemd-boot.enable = true;
+        boot.loader.efi.canTouchEfiVariables = true;
 
-        #   services.openssh = {
-        #     enable = true;
-        #     settings.PermitRootLogin = "yes";
-        #   };
+        swapDevices = [ ];
 
-          users.users.root.password = "nixos"; # FIXME:
+        networking.useDHCP = nixpkgs.lib.mkDefault true;
 
-        #   fileSystems."/boot" = {
-        #     device = "/dev/disk/by-label/ESP"; # /dev/vda1
-        #     fsType = "vfat";
-        #   };
+        nixpkgs.hostPlatform = nixpkgs.lib.mkDefault "aarch64-linux";
 
-        #   fileSystems."/" = {
-        #     device = "/dev/disk/by-label/nixos";
-        #     autoResize = true;
-        #     fsType = "ext4";
-        #     options = ["noatime" "nodiratime" "discard"];
-        #   };
+        # services.openssh = { # FIXME: use
+        #   enable = true;
+        #   settings.PermitRootLogin = "yes";
+        # };
+        services.openssh.enable = true;
+        services.openssh.settings.PermitRootLogin = "yes"; # FIXME: remove
 
-          boot.kernelParams = [ "console=tty0" ];
-        }
-      ];
+        system.stateVersion = "24.05"; # Did you read the comment?
+
+        virtualisation.rosetta = {
+          enable = true;
+          mountTag = "vz-rosetta";
+        };
+
+        users.users.root.password = "nixos"; # FIXME:
+
+        # fileSystems."/boot" = {
+        #   device = "/dev/disk/by-label/ESP"; # /dev/vda1
+        #   fsType = "vfat";
+        # };
+
+        # fileSystems."/" = {
+        #   device = "/dev/disk/by-label/nixos";
+        #   autoResize = true;
+        #   fsType = "ext4";
+        #   options = ["noatime" "nodiratime" "discard"];
+        # };
+      } ];
       system = linuxSystem;
     };
 
