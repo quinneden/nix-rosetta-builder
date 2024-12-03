@@ -35,6 +35,8 @@
           };
         };
 
+        documentation.enable = false;
+
         fileSystems = {
           "/".options = [ "discard" "noatime" ];
           "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
@@ -47,8 +49,15 @@
         };
 
         nix = {
+          channel.enable = false;
           registry.nixpkgs.flake = nixpkgs;
-          settings.experimental-features = [ "flakes" "nix-command" ];
+
+          settings = {
+            auto-optimise-store = true;
+            experimental-features = [ "flakes" "nix-command" ];
+            min-free = "5G";
+            max-free = "7G";
+          };
         };
 
         security = {
@@ -74,7 +83,7 @@
           openssh = {
             authorizedKeysFiles = [ "${keysDirectory}/%u_${keyType}.pub" ];
             enable = true;
-            hostKeys = [];
+            hostKeys = []; # disable automatic host key generation
 
             settings = {
               HostKey = "${keysDirectory}/ssh_host_${keyType}_key";
@@ -83,7 +92,10 @@
           };
         };
 
-        system.stateVersion = "24.05";
+        system = {
+          disableInstallerTools = true;
+          stateVersion = "24.05";
+        };
 
         users.users."${user}".isNormalUser = true;
 
