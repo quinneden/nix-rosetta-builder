@@ -24,10 +24,6 @@
         #   (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix")
         # ];
 
-        # FIXME: use?
-        # nix.registry.nixpkgs.flake = nixpkgs;
-        # virtualisation.diskSize = 10 * 1024;
-
         boot = {
           kernelParams = [ "console=tty0" ];
 
@@ -41,6 +37,8 @@
           "/".options = [ "discard" "noatime" ];
           "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
         };
+
+        nix.registry.nixpkgs.flake = nixpkgs;
 
         services.openssh = {
           enable = true;
