@@ -15,6 +15,10 @@
     pkgs = nixpkgs.legacyPackages."${system}";
     linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
 
+    keysDirectory = "/var/keys";
+    keyType = "ed25519";
+    user = "builder";
+
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
       format = "qcow-efi";
@@ -34,6 +38,12 @@
         fileSystems = {
           "/".options = [ "discard" "noatime" ];
           "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
+
+          "${keysDirectory}" = {
+            device = "mount0"; # must match `mounts` order in builder.yaml
+            fsType = "virtiofs";
+            options = [ "ro" ];
+          };
         };
 
         nix = {
@@ -41,14 +51,24 @@
           settings.experimental-features = [ "flakes" "nix-command" ];
         };
 
-        services.openssh = {
-          enable = true;
+        services = {
+          getty.autologinUser = user;
+
+          openssh = {
+            authorizedKeysFiles = [ "${keysDirectory}/%u_${keyType}.pub" ];
+            enable = true;
+            hostKeys = [];
+
+            settings = {
+              HostKey = "${keysDirectory}/ssh_host_${keyType}_key";
+              PasswordAuthentication = false;
+            };
+          };
         };
-        services.openssh.settings.PermitRootLogin = "yes"; # FIXME: remove
 
         system.stateVersion = "24.05";
 
-        users.users.root.password = "nixos"; # FIXME: remove
+        users.users."${user}".isNormalUser = true;
 
         virtualisation.rosetta = {
           enable = true;
@@ -61,7 +81,6 @@
 
     devShells."${system}".default = pkgs.mkShell { packages = [
       pkgs.lima
-      pkgs.sshpass
     ]; };
   };
 }
