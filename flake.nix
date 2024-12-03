@@ -28,14 +28,6 @@
         # virtualisation.diskSize = 10 * 1024;
 
         boot = {
-          extraModulePackages = [ ];
-
-          initrd = {
-            availableKernelModules = [ "xhci_pci" ];
-            kernelModules = [ ];
-          };
-
-          kernelModules = [ ];
           kernelParams = [ "console=tty0" ];
 
           loader = {
