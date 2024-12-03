@@ -18,6 +18,7 @@
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
       format = "qcow-efi";
+
       modules = [ {
         # imports = [ # FIXME: include?
         #   (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix")
@@ -41,26 +42,21 @@
           "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
         };
 
-        networking.useDHCP = nixpkgs.lib.mkDefault true;
-
-        nixpkgs.hostPlatform = nixpkgs.lib.mkDefault "aarch64-linux";
-
         services.openssh = {
           enable = true;
-          settings.PermitRootLogin = "yes"; # FIXME: remove
         };
+        services.openssh.settings.PermitRootLogin = "yes"; # FIXME: remove
 
-        swapDevices = [ ];
+        system.stateVersion = "24.05";
 
-        system.stateVersion = "24.05"; # Did you read the comment?
-
-        users.users.root.password = "nixos"; # FIXME:
+        users.users.root.password = "nixos"; # FIXME: remove
 
         virtualisation.rosetta = {
           enable = true;
           mountTag = "vz-rosetta";
         };
       } ];
+
       system = linuxSystem;
     };
 
