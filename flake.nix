@@ -20,9 +20,7 @@
       format = "qcow-efi";
 
       modules = [ {
-        # imports = [ # FIXME: include?
-        #   (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix")
-        # ];
+        # imports = [ (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix") ]; # FIXME: include?
 
         boot = {
           kernelParams = [ "console=tty0" ];
@@ -38,7 +36,10 @@
           "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
         };
 
-        nix.registry.nixpkgs.flake = nixpkgs;
+        nix = {
+          registry.nixpkgs.flake = nixpkgs;
+          settings.experimental-features = [ "flakes" "nix-command" ];
+        };
 
         services.openssh = {
           enable = true;
