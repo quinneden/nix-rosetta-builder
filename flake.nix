@@ -27,44 +27,22 @@
         # nix.registry.nixpkgs.flake = nixpkgs;
         # virtualisation.diskSize = 10 * 1024;
 
-        # boot.loader = { # FIXME: use
-        #   systemd-boot.enable = true; 
-        #   efi.canTouchEfiVariables = true;
-        # };
-        boot.initrd.availableKernelModules = [ "xhci_pci" ];
-        boot.initrd.kernelModules = [ ];
-        boot.kernelModules = [ ];
-        boot.kernelParams = [ "console=tty0" ];
-        boot.extraModulePackages = [ ];
-        boot.loader.systemd-boot.enable = true;
-        boot.loader.efi.canTouchEfiVariables = true;
+        boot = {
+          extraModulePackages = [ ];
 
-        swapDevices = [ ];
+          initrd = {
+            availableKernelModules = [ "xhci_pci" ];
+            kernelModules = [ ];
+          };
 
-        networking.useDHCP = nixpkgs.lib.mkDefault true;
+          kernelModules = [ ];
+          kernelParams = [ "console=tty0" ];
 
-        nixpkgs.hostPlatform = nixpkgs.lib.mkDefault "aarch64-linux";
-
-        # services.openssh = { # FIXME: use
-        #   enable = true;
-        #   settings.PermitRootLogin = "yes";
-        # };
-        services.openssh.enable = true;
-        services.openssh.settings.PermitRootLogin = "yes"; # FIXME: remove
-
-        system.stateVersion = "24.05"; # Did you read the comment?
-
-        virtualisation.rosetta = {
-          enable = true;
-          mountTag = "vz-rosetta";
+          loader = {
+            efi.canTouchEfiVariables = true;
+            systemd-boot.enable = true; 
+          };
         };
-
-        users.users.root.password = "nixos"; # FIXME:
-
-        # fileSystems."/boot" = {
-        #   device = "/dev/disk/by-label/ESP"; # /dev/vda1
-        #   fsType = "vfat";
-        # };
 
         # fileSystems."/" = {
         #   device = "/dev/disk/by-label/nixos";
@@ -72,6 +50,31 @@
         #   fsType = "ext4";
         #   options = ["noatime" "nodiratime" "discard"];
         # };
+
+        # fileSystems."/boot" = {
+        #   device = "/dev/disk/by-label/ESP"; # /dev/vda1
+        #   fsType = "vfat";
+        # };
+
+        networking.useDHCP = nixpkgs.lib.mkDefault true;
+
+        nixpkgs.hostPlatform = nixpkgs.lib.mkDefault "aarch64-linux";
+
+        services.openssh = {
+          enable = true;
+          settings.PermitRootLogin = "yes"; # FIXME: remove
+        };
+
+        swapDevices = [ ];
+
+        system.stateVersion = "24.05"; # Did you read the comment?
+
+        users.users.root.password = "nixos"; # FIXME:
+
+        virtualisation.rosetta = {
+          enable = true;
+          mountTag = "vz-rosetta";
+        };
       } ];
       system = linuxSystem;
     };
