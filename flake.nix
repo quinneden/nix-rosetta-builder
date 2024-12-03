@@ -44,17 +44,10 @@
           };
         };
 
-        # fileSystems."/" = {
-        #   device = "/dev/disk/by-label/nixos";
-        #   autoResize = true;
-        #   fsType = "ext4";
-        #   options = ["noatime" "nodiratime" "discard"];
-        # };
-
-        # fileSystems."/boot" = {
-        #   device = "/dev/disk/by-label/ESP"; # /dev/vda1
-        #   fsType = "vfat";
-        # };
+        fileSystems = {
+          "/".options = [ "discard" "noatime" ];
+          "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
+        };
 
         networking.useDHCP = nixpkgs.lib.mkDefault true;
 
