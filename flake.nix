@@ -17,7 +17,7 @@
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
-      format = "raw-efi";
+      format = "qcow-efi";
       modules = [
         ./configuration.nix
         {

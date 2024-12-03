@@ -1,5 +1,5 @@
 images:
-- location: "nixos.img"
+- location: "result/nixos.qcow2"
 
 cpus: 8
 memory: "6GiB"

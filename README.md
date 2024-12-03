@@ -7,8 +7,6 @@ Lima-based, Rosetta 2-enabled, Apple silicon (macOS/Darwin)-hosted Linux builder
 Build image:
 ```sh
 nix build '.#packages.aarch64-linux.default'
-cp result/nixos.img .
-chmod +w nixos.img
 ```
 
 Create and start VM (optionally add `--video` for console):
