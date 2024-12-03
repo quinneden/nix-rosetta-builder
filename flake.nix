@@ -1,5 +1,5 @@
 {
-  description = "Lima-based, Rosetta 2-enabled, macOS (Darwin) builder";
+  description = "Lima-based, Rosetta 2-enabled, Apple silicon (macOS/Darwin)-hosted Linux builder";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -66,6 +66,7 @@
 
     devShells."${system}".default = pkgs.mkShell { packages = [
       pkgs.lima
+      pkgs.sshpass
     ]; };
   };
 }
