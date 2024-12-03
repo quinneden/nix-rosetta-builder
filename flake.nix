@@ -27,7 +27,11 @@
         #   # FIXME: ?
         #   # nix.registry.nixpkgs.flake = nixpkgs;
         #   # virtualisation.diskSize = 10 * 1024;
-        #   # virtualisation.rosetta.enable = true;
+          virtualisation.rosetta = {
+            enable = true;
+            mountTag = "vz-rosetta";
+          };
+
 
         #   # boot.loader = {
         #   #   systemd-boot.enable = true; 

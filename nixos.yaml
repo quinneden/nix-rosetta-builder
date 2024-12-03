@@ -7,4 +7,5 @@ memory: "6GiB"
 ssh:
   localPort: 2226
 
-plain: true
+rosetta:
+  enabled: true
