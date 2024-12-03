@@ -3,7 +3,6 @@ images:
 
 cpus: 8
 memory: "6GiB"
-disk: "50GiB"
 
 ssh:
   localPort: 2226
