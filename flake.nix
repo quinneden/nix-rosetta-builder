@@ -51,6 +51,23 @@
           settings.experimental-features = [ "flakes" "nix-command" ];
         };
 
+        security = {
+          polkit = {
+            enable = true;
+            extraConfig = ''
+              polkit.addRule(function(action, subject) {
+                if (action.id === "org.freedesktop.login1.power-off" && subject.user === "${user}") {
+                  return "yes";
+                } else {
+                  return "no";
+                }
+              })
+            '';
+          };
+
+          sudo.enable = false;
+        };
+
         services = {
           getty.autologinUser = user;
 
