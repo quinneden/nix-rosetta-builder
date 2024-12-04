@@ -5,7 +5,7 @@ cpus: 8
 memory: "6GiB"
 
 mounts:
-  - location: "~/lima-builder-keys" # must be first to match `mount0` tag in flake.nix
+  - location: "~/rosetta-builder/sshdkeys" # must be first so it matches `mount0` tag in flake.nix
 
 ssh:
   localPort: 2226
