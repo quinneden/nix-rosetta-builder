@@ -15,6 +15,7 @@
     pkgs = nixpkgs.legacyPackages."${system}";
     linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
 
+    allowRoot = true; # FIXME: disable
     keysDirectory = "/var/keys";
     keyType = "ed25519";
     user = "builder";
@@ -74,7 +75,10 @@
             '';
           };
 
-          sudo.enable = false;
+          sudo = {
+            enable = allowRoot;
+            wheelNeedsPassword = !allowRoot;
+          };
         };
 
         services = {
@@ -97,7 +101,10 @@
           stateVersion = "24.05";
         };
 
-        users.users."${user}".isNormalUser = true;
+        users.users."${user}" = {
+          isNormalUser = true;
+          extraGroups = nixpkgs.lib.optionals allowRoot [ "wheel" ];
+        };
 
         virtualisation.rosetta = {
           enable = true;
