@@ -14,12 +14,21 @@
     system = "aarch64-darwin";
     pkgs = nixpkgs.legacyPackages."${system}";
     linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
+    linuxPkgs = nixpkgs.legacyPackages."${linuxSystem}";
     lib = nixpkgs.lib;
 
-    debug = true; # FIXME: disable
-    keysDirectory = "/var/keys";
-    keyType = "ed25519";
     user = "builder";
+
+    sshdkeysVirtiofsTag = "mount0"; # must match `mounts` order in builder.yaml
+    sshdkeysDirectory = "/var/sshdkeys";
+    sshDirectory = "/etc/ssh";
+    sshKeyType = "ed25519";
+    sshHostKeyFilename = "ssh_host_${sshKeyType}_key";
+    sshHostKeyPath = "${sshDirectory}/${sshHostKeyFilename}";
+    sshAuthorizedKeysUserPath = "${sshDirectory}/authorized_keys.d/${user}";
+    sshdService = "sshd.service";
+
+    debug = true; # FIXME: disable
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
@@ -42,12 +51,6 @@
         fileSystems = {
           "/".options = [ "discard" "noatime" ];
           "/boot".options = [ "discard" "noatime" "umask=0077" ];
-
-          "${keysDirectory}" = {
-            device = "mount0"; # must match `mounts` order in builder.yaml
-            fsType = "virtiofs";
-            options = [ "nodev" "noexec" "nosuid" "ro" ];
-          };
         };
 
         nix = {
@@ -86,12 +89,11 @@
           getty = lib.optionalAttrs debug { autologinUser = user; };
 
           openssh = {
-            authorizedKeysFiles = [ "${keysDirectory}/%u_${keyType}.pub" ];
             enable = true;
             hostKeys = []; # disable automatic host key generation
 
             settings = {
-              HostKey = "${keysDirectory}/ssh_host_${keyType}_key";
+              HostKey = sshHostKeyPath;
               PasswordAuthentication = false;
             };
           };
@@ -100,6 +102,39 @@
         system = {
           disableInstallerTools = true;
           stateVersion = "24.05";
+        };
+
+        systemd.services.sshdkeys = {
+          before = [ sshdService ];
+          description = "Install sshd's host and authorized keys";
+          requiredBy = [ sshdService ];
+
+          script = ''
+            export PATH="${lib.makeBinPath [ linuxPkgs.mount linuxPkgs.umount ]}:$PATH"
+
+            umask 'go-w'
+
+            mkdir -p '${sshdkeysDirectory}'
+            mount \
+              -t 'virtiofs' \
+              -o 'nodev,noexec,nosuid,ro' \
+              '${sshdkeysVirtiofsTag}' \
+              '${sshdkeysDirectory}'
+
+            mkdir -p "$(dirname '${sshHostKeyPath}')"
+            (umask 'go-rwx' ; cp '${sshdkeysDirectory}/${sshHostKeyFilename}' '${sshHostKeyPath}')
+
+            mkdir -p "$(dirname '${sshAuthorizedKeysUserPath}')"
+            cp '${sshdkeysDirectory}/${user}_${sshKeyType}.pub' '${sshAuthorizedKeysUserPath}'
+            chmod 'a+r' '${sshAuthorizedKeysUserPath}'
+
+            umount '${sshdkeysDirectory}'
+            rmdir '${sshdkeysDirectory}'
+          '';
+
+          serviceConfig = {
+            Type = "oneshot";
+          };
         };
 
         users.users."${user}" = {
