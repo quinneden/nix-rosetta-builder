@@ -132,9 +132,8 @@
             rmdir '${sshdkeysDirectory}'
           '';
 
-          serviceConfig = {
-            Type = "oneshot";
-          };
+          serviceConfig.Type = "oneshot";
+          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserPath}";
         };
 
         users.users."${user}" = {
