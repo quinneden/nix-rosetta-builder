@@ -40,7 +40,7 @@
 
         fileSystems = {
           "/".options = [ "discard" "noatime" ];
-          "/boot".options = [ "dmask=0077" "fmask=0077" "noatime" ];
+          "/boot".options = [ "discard" "noatime" "umask=0077" ];
 
           "${keysDirectory}" = {
             device = "mount0"; # must match `mounts` order in builder.yaml
