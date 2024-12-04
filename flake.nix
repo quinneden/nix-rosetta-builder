@@ -24,7 +24,7 @@
       format = "qcow-efi";
 
       modules = [ {
-        # imports = [ (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix") ]; # FIXME: include?
+        imports = [ (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix") ];
 
         boot = {
           kernelParams = [ "console=tty0" ];
