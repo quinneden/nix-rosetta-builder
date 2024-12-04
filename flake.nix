@@ -14,8 +14,9 @@
     system = "aarch64-darwin";
     pkgs = nixpkgs.legacyPackages."${system}";
     linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
+    lib = nixpkgs.lib;
 
-    allowRoot = true; # FIXME: disable
+    debug = true; # FIXME: disable
     keysDirectory = "/var/keys";
     keyType = "ed25519";
     user = "builder";
@@ -62,7 +63,7 @@
         };
 
         security = {
-          polkit = {
+          polkit = lib.optionalAttrs debug {
             enable = true;
             extraConfig = ''
               polkit.addRule(function(action, subject) {
@@ -76,13 +77,13 @@
           };
 
           sudo = {
-            enable = allowRoot;
-            wheelNeedsPassword = !allowRoot;
+            enable = debug;
+            wheelNeedsPassword = !debug;
           };
         };
 
         services = {
-          getty.autologinUser = user;
+          getty = lib.optionalAttrs debug { autologinUser = user; };
 
           openssh = {
             authorizedKeysFiles = [ "${keysDirectory}/%u_${keyType}.pub" ];
@@ -103,7 +104,7 @@
 
         users.users."${user}" = {
           isNormalUser = true;
-          extraGroups = nixpkgs.lib.optionals allowRoot [ "wheel" ];
+          extraGroups = lib.optionals debug [ "wheel" ];
         };
 
         virtualisation.rosetta = {
