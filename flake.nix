@@ -45,7 +45,7 @@
           "${keysDirectory}" = {
             device = "mount0"; # must match `mounts` order in builder.yaml
             fsType = "virtiofs";
-            options = [ "ro" ];
+            options = [ "nodev" "noexec" "nosuid" "ro" ];
           };
         };
 
