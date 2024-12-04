@@ -70,7 +70,13 @@
             enable = true;
             extraConfig = ''
               polkit.addRule(function(action, subject) {
-                if (action.id === "org.freedesktop.login1.power-off" && subject.user === "${user}") {
+                if (
+                  (
+                    action.id === "org.freedesktop.login1.power-off"
+                    || action.id === "org.freedesktop.login1.reboot"
+                  )
+                  && subject.user === "${user}"
+                ) {
                   return "yes";
                 } else {
                   return "no";
