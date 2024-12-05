@@ -225,21 +225,25 @@
           IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
       '';
 
-      users = {
-        # FIXME: use?
-        # groups."${darwinGroup}" = {
-        #   # gid = darwinGid; # FIXME
-        # };
+      users =
+      let
+        darwinGid = 340;
+        darwinUid = darwinGid + 1;
 
-        # knownGroups = [ darwinGroup ]; # FIXME: use?
+      in {
+        groups."${darwinGroup}" = {
+          gid = darwinGid;
+        };
+
+        knownGroups = [ darwinGroup ];
         knownUsers = [ darwinUser ];
 
         users."${darwinUser}" = {
-          # createHome = true; # FIXME: use?
-          # gid = darwinGid; # FIXME: use?
-          # home = workingDirPath; # FIXME: use?
+          createHome = true;
+          gid = darwinGid;
+          home = workingDirPath;
           isHidden = true;
-          # uid = FIXME; # FIXME: use?
+          uid = darwinUid;
         };
       };
 
