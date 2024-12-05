@@ -232,7 +232,7 @@
         # };
 
         # knownGroups = [ darwinGroup ]; # FIXME: use?
-        # knownUsers = [ darwinUser ]; # FIXME: use?
+        knownUsers = [ darwinUser ];
 
         users."${darwinUser}" = {
           # createHome = true; # FIXME: use?
