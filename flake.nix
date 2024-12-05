@@ -22,7 +22,7 @@
     sshKeyType = "ed25519";
     sshHostPrivateKeyFileName = "ssh_host_${sshKeyType}_key";
     sshHostPublicKeyFileName = "${sshHostPrivateKeyFileName}.pub";
-    sshUserPrivateKeyFileName = "ssh_user_${sshKeyType}";
+    sshUserPrivateKeyFileName = "ssh_user_${sshKeyType}_key";
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = true; # FIXME: disable
@@ -249,7 +249,7 @@
 
       launchd.daemons."${daemonName}" = {
         environment.LIMA_HOME = "lima";
-        path = [ "/usr/bin" pkgs.lima ];
+        path = [ "/usr/bin" "/bin" pkgs.lima ];
 
         script =
         let
