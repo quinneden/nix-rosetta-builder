@@ -219,7 +219,7 @@
           GlobalKnownHostsFile "${workingDirPath}/${sshGlobalKnownHostsFileName}"
           Hostname localhost
           HostKeyAlias "${sshHostKeyAlias}"
-          Port "${port}"
+          Port "${toString port}"
           StrictHostKeyChecking yes
           User "${linuxUser}"
           IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
