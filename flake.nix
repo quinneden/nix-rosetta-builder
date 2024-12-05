@@ -248,9 +248,12 @@
       nix = {
         buildMachines = [{
           hostName = hostname;
+          maxJobs = cores;
+          protocol = "ssh-ng";
           sshUser = user; # FIXME: separate hostUser from guestUser
-          sshKey = "${workingDirectory}/${user}_${sshKeyType}"; # FIXME: variabls
-          inherit (cfg) mandatoryFeatures maxJobs protocol speedFactor supportedFeatures systems;
+          sshKey = "${workingDirectory}/${user}_${sshKeyType}"; # FIXME: variables
+          supportedFeatures = [ "benchmark" "big-parallel" "kvm" ];
+          systems = [ linuxSystem "x86_64-linux" ];
         }];
 
         distributedBuilds = true;
