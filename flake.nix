@@ -11,31 +11,32 @@
 
   outputs = { self, nixos-generators, nixpkgs }:
   let
-    system = "aarch64-darwin";
-    pkgs = nixpkgs.legacyPackages."${system}";
-    linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
-    linuxPkgs = nixpkgs.legacyPackages."${linuxSystem}";
+    darwinSystem = "aarch64-darwin";
+    linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] darwinSystem;
     lib = nixpkgs.lib;
 
-    cores = 8;
-    hostname = "rosetta-builder";
-    imageFormat = "qcow-efi"; # must match `builderYaml.images.location`s extension
-    port = 2226;
-    user = "builder";
+    hostname = "rosetta-builder"; # FIXME: split into logical uses
+    user = "builder"; # FIXME: split into darwin and linux
 
-    sshdkeysVirtiofsTag = "mount0"; # suffix must match `builderYaml.mounts.location`s order
-    guestSshdkeysDirectory = "/var/sshdkeys";
-    sshDirectory = "/etc/ssh";
     sshKeyType = "ed25519";
-    sshHostKeyFilename = "ssh_host_${sshKeyType}_key";
-    sshHostKeyPath = "${sshDirectory}/${sshHostKeyFilename}";
-    sshAuthorizedKeysUserPath = "${sshDirectory}/authorized_keys.d/${user}";
-    sshdService = "sshd.service";
+    sshHostPrivateKeyFileName = "ssh_host_${sshKeyType}_key";
+    sshHostPublicKeyFileName = "${sshHostPrivateKeyFileName}.pub";
+    sshUserPrivateKeyFileName = "${user}_${sshKeyType}";
+    sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = true; # FIXME: disable
 
   in {
-    packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
+    packages."${linuxSystem}".default = nixos-generators.nixosGenerate (
+    let
+      imageFormat = "qcow-efi"; # must match `builderYaml.images.location`s extension
+      pkgs = nixpkgs.legacyPackages."${linuxSystem}";
+
+      sshdKeys = "sshd-keys";
+      sshDirPath = "/etc/ssh";
+      sshHostPrivateKeyFilePath = "${sshDirPath}/${sshHostPrivateKeyFileName}";
+
+    in {
       format = imageFormat;
 
       modules = [ {
@@ -56,6 +57,8 @@
           "/".options = [ "discard" "noatime" ];
           "/boot".options = [ "discard" "noatime" "umask=0077" ];
         };
+
+        networking.hostname = hostname;
 
         nix = {
           channel.enable = false;
@@ -103,7 +106,7 @@
             hostKeys = []; # disable automatic host key generation
 
             settings = {
-              HostKey = sshHostKeyPath;
+              HostKey = sshHostPrivateKeyFilePath;
               PasswordAuthentication = false;
             };
           };
@@ -114,40 +117,45 @@
           stateVersion = "24.05";
         };
 
-        systemd.services.sshdkeys = {
+        systemd.services."${sshdKeys}" =
+        let
+          sshdKeysVirtiofsTag = "mount0"; # suffix must match `builderYaml.mounts.location`s order
+          sshdKeysDirPath = "/var/${sshdKeys}";
+          sshAuthorizedKeysUserFilePath = "${sshDirPath}/authorized_keys.d/${user}";
+          sshdService = "sshd.service";
+
+        in {
           before = [ sshdService ];
           description = "Install sshd's host and authorized keys";
           enableStrictShellChecks = true;
-          path = [ linuxPkgs.mount linuxPkgs.umount ];
+          path = [ pkgs.mount pkgs.umount ];
           requiredBy = [ sshdService ];
 
           # must be idempotent in the face of partial failues
           script = ''
-            mkdir -p '${guestSshdkeysDirectory}'
+            mkdir -p '${sshdKeysDirPath}'
             mount \
               -t 'virtiofs' \
               -o 'nodev,noexec,nosuid,ro' \
-              '${sshdkeysVirtiofsTag}' \
-              '${guestSshdkeysDirectory}'
+              '${sshdKeysVirtiofsTag}' \
+              '${sshdKeysDirPath}'
 
-            mkdir -p "$(dirname '${sshHostKeyPath}')"
+            mkdir -p "$(dirname '${sshHostPrivateKeyFilePath}')"
             (
               umask 'go-rwx'
-              cp '${guestSshdkeysDirectory}/${sshHostKeyFilename}' '${sshHostKeyPath}'
+              cp '${sshdKeysDirPath}/${sshHostPrivateKeyFileName}' '${sshHostPrivateKeyFilePath}'
             )
 
-            mkdir -p "$(dirname '${sshAuthorizedKeysUserPath}')"
-            cp \
-              '${guestSshdkeysDirectory}/${user}_${sshKeyType}.pub' \
-              '${sshAuthorizedKeysUserPath}'
-            chmod 'a+r' '${sshAuthorizedKeysUserPath}'
+            mkdir -p "$(dirname '${sshAuthorizedKeysUserFilePath}')"
+            cp '${sshdKeysDirPath}/${sshUserPublicKeyFileName}' '${sshAuthorizedKeysUserFilePath}'
+            chmod 'a+r' '${sshAuthorizedKeysUserFilePath}'
 
-            umount '${guestSshdkeysDirectory}'
-            rmdir '${guestSshdkeysDirectory}'
+            umount '${sshdKeysDirPath}'
+            rmdir '${sshdKeysDirPath}'
           '';
 
           serviceConfig.Type = "oneshot";
-          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserPath}";
+          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}";
         };
 
         users.users."${user}" = {
@@ -162,15 +170,22 @@
       } ];
 
       system = linuxSystem;
+    });
+
+    devShells."${darwinSystem}".default =
+    let
+      pkgs = nixpkgs.legacyPackages."${darwinSystem}";
+    in pkgs.mkShell {
+      packages = [ pkgs.lima ];
     };
 
-    devShells."${system}".default = pkgs.mkShell { packages = [
-      pkgs.lima
-    ]; };
-
-    darwinModules.default = { lib, ... }:
+    darwinModules.default = { lib, pkgs, ... }:
     let
-      workingDirectory = "FIXME";
+      cores = 8;
+      port = 2226;
+      workingDirPath = "FIXME";
+
+      linuxSshdKeysDirName = "linux-sshd-keys";
 
       builderYaml = (pkgs.formats.yaml {}).generate "${hostname}.yaml" {
         cpus = cores;
@@ -183,8 +198,8 @@
         memory = "6GiB";
 
         mounts = [{
-          # order must match `sshdkeysVirtiofsTag`s suffix 
-          location = "${workingDirectory}/sshdkeys"; # FIXME: variable
+          # order must match `sshdKeysVirtiofsTag`s suffix
+          location = "${workingDirPath}/${linuxSshdKeysDirName}";
         }];
 
         rosetta.enabled = true;
@@ -194,18 +209,18 @@
     in {
       environment.etc."ssh/ssh_config.d/100-${hostname}.conf".text = ''
         Host "${hostname}"
-          GlobalKnownHostsFile "${workingDirectory}/ssh_known_hosts" # FIXME: variable
+          GlobalKnownHostsFile "${workingDirPath}/ssh_known_hosts" # FIXME: variable
           Hostname localhost
           HostKeyAlias "${hostname}"
           Port "${port}"
           User "${user}"
-          IdentityFile "${workingDirectory}/${user}_${sshKeyType}" # FIXME: variable
+          IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
       '';
 
-      users.users."${user}" = { # FIXME: separate hostUser?
+      users.users."${user}" = { # FIXME: separate darwinUser?
         # createHome = true;
         # gid = FIXME;
-        # home = workingDirectory;
+        # home = workingDirPath;
         isHidden = true;
         # uid = FIXME;
       };
@@ -218,14 +233,18 @@
           # FIXME: variables
           # must be idempotent in the face of partial failues
           limactl list -q 2>'/dev/null' | grep -q '${hostname}' || {
-            mkdir -p 'sshdkeys'
-
-            ssh-keygen -C '${user}@localhost' -f '${user}_${sshKeyType}' -N "" -t '${sshKeyType}'
             ssh-keygen \
-              -C 'root@${hostname}' -f 'ssh_host_${sshKeyType}_key' -N "" -t '${sshKeyType}'
+              -C '${user}@darwin' -f '${sshUserPrivateKeyFileName}' -N "" -t '${sshKeyType}'
+            ssh-keygen \
+              -C 'root@${hostname}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
 
-            mv '${user}_${sshKeyType}.pub' 'ssh_host_${sshKeyType}_key' 'sshdkeys'
-            echo "${hostname} $(cat 'ssh_host_${sshKeyType}_key.pub')" >'ssh_known_hosts'
+            mkdir -p '${linuxSshdKeysDirName}'
+            mv \
+              '${sshUserPublicKeyFileName}' \
+              '${sshHostPrivateKeyFileName}' \
+              '${linuxSshdKeysDirName}'
+
+            echo "${hostname} $(cat '${sshHostPublicKeyFileName}')" >'ssh_known_hosts'
 
             limactl create '${builderYaml}'
           }
@@ -237,7 +256,7 @@
           KeepAlive = true;
           RunAtLoad = true;
           UserName = user;
-          WorkingDirectory = workingDirectory;
+          WorkingDirectory = workingDirPath;
         } // lib.optionalAttrs debug {
           StandardErrorPath = "/tmp/${hostname}.err.log";
           StandardOutPath = "/tmp/${hostname}.out.log";
@@ -249,8 +268,6 @@
           hostName = hostname;
           maxJobs = cores;
           protocol = "ssh-ng";
-          sshUser = user; # FIXME: separate hostUser from guestUser
-          sshKey = "${workingDirectory}/${user}_${sshKeyType}"; # FIXME: variables
           supportedFeatures = [ "benchmark" "big-parallel" "kvm" ];
           systems = [ linuxSystem "x86_64-linux" ];
         }];
