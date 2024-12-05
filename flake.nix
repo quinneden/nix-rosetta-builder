@@ -220,6 +220,7 @@
           Hostname localhost
           HostKeyAlias "${sshHostKeyAlias}"
           Port "${port}"
+          StrictHostKeyChecking yes
           User "${linuxUser}"
           IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
       '';
