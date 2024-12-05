@@ -117,13 +117,11 @@
         systemd.services.sshdkeys = {
           before = [ sshdService ];
           description = "Install sshd's host and authorized keys";
+          path = [ linuxPkgs.mount linuxPkgs.umount ];
           requiredBy = [ sshdService ];
 
           # must be idempotent in the face of partial failues
           script = ''
-            PATH="${lib.makeBinPath [ linuxPkgs.mount linuxPkgs.umount ]}:$PATH"
-            export PATH
-
             mkdir -p '${guestSshdkeysDirectory}'
             mount \
               -t 'virtiofs' \
@@ -212,13 +210,10 @@
       };
 
       launchd.daemons."${hostname}" = {
+        environment.LIMA_HOME = "lima";
+        path = []; # FIXME: fill pkgs.grep? pkgs.lima pkgs.openssh
+
         script = ''
-          PATH="${lib.makeBinPath []}:$PATH" # FIXME: fill pkgs.grep? pkgs.lima pkgs.openssh
-          export PATH
-
-          LIMA_HOME='lima'
-          export LIMA_HOME
-
           # FIXME: variables
           # must be idempotent in the face of partial failues
           limactl list -q 2>'/dev/null' | grep -q '${hostname}' || {
