@@ -249,18 +249,21 @@
 
       launchd.daemons."${daemonName}" = {
         environment.LIMA_HOME = "lima";
-        path = [ pkgs.gnugrep pkgs.lima pkgs.openssh ];
+        path = [ "/usr/bin" pkgs.lima ];
 
         script =
         let
           vmName = "${name}-vm";
 
         in ''
+          set -e
+          set -u
+
           # must be idempotent in the face of partial failues
           limactl list -q 2>'/dev/null' | grep -q '${vmName}' || {
-            ssh-keygen \
+            yes | ssh-keygen \
               -C '${darwinUser}@darwin' -f '${sshUserPrivateKeyFileName}' -N "" -t '${sshKeyType}'
-            ssh-keygen \
+            yes | ssh-keygen \
               -C 'root@${linuxHostName}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
 
             mkdir -p '${linuxSshdKeysDirName}'
