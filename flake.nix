@@ -15,13 +15,14 @@
     linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] darwinSystem;
     lib = nixpkgs.lib;
 
-    hostname = "rosetta-builder"; # FIXME: split into logical uses
-    user = "builder"; # FIXME: split into darwin and linux
+    name = "rosetta-builder"; # update `darwinGroup` if adding or removing special characters
+    linuxHostname = name; # no prefix because it's user visible (on prompt when `ssh`d in)
+    linuxUser = "builder"; # follow linux-builder/darwin-builder precedent
 
     sshKeyType = "ed25519";
     sshHostPrivateKeyFileName = "ssh_host_${sshKeyType}_key";
     sshHostPublicKeyFileName = "${sshHostPrivateKeyFileName}.pub";
-    sshUserPrivateKeyFileName = "${user}_${sshKeyType}";
+    sshUserPrivateKeyFileName = "$ssh_user_${sshKeyType}";
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = true; # FIXME: disable
@@ -29,7 +30,7 @@
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate (
     let
-      imageFormat = "qcow-efi"; # must match `builderYaml.images.location`s extension
+      imageFormat = "qcow-efi"; # must match `vmYaml.images.location`s extension
       pkgs = nixpkgs.legacyPackages."${linuxSystem}";
 
       sshdKeys = "sshd-keys";
@@ -58,7 +59,7 @@
           "/boot".options = [ "discard" "noatime" "umask=0077" ];
         };
 
-        networking.hostname = hostname;
+        networking.hostname = linuxHostname;
 
         nix = {
           channel.enable = false;
@@ -69,6 +70,7 @@
             experimental-features = [ "flakes" "nix-command" ];
             min-free = "5G";
             max-free = "7G";
+            trusted-users = [ linuxUser ];
           };
         };
 
@@ -82,7 +84,7 @@
                     action.id === "org.freedesktop.login1.power-off"
                     || action.id === "org.freedesktop.login1.reboot"
                   )
-                  && subject.user === "${user}"
+                  && subject.user === "${linuxUser}"
                 ) {
                   return "yes";
                 } else {
@@ -99,7 +101,7 @@
         };
 
         services = {
-          getty = lib.optionalAttrs debug { autologinUser = user; };
+          getty = lib.optionalAttrs debug { autologinUser = linuxUser; };
 
           openssh = {
             enable = true;
@@ -119,9 +121,9 @@
 
         systemd.services."${sshdKeys}" =
         let
-          sshdKeysVirtiofsTag = "mount0"; # suffix must match `builderYaml.mounts.location`s order
+          sshdKeysVirtiofsTag = "mount0"; # suffix must match `vmYaml.mounts.location`s order
           sshdKeysDirPath = "/var/${sshdKeys}";
-          sshAuthorizedKeysUserFilePath = "${sshDirPath}/authorized_keys.d/${user}";
+          sshAuthorizedKeysUserFilePath = "${sshDirPath}/authorized_keys.d/${linuxUser}";
           sshdService = "sshd.service";
 
         in {
@@ -158,7 +160,7 @@
           unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}";
         };
 
-        users.users."${user}" = {
+        users.users."${linuxUser}" = {
           isNormalUser = true;
           extraGroups = lib.optionals debug [ "wheel" ];
         };
@@ -182,12 +184,17 @@
     darwinModules.default = { lib, pkgs, ... }:
     let
       cores = 8;
-      port = 2226;
-      workingDirPath = "FIXME";
-
+      daemonName = "${name}d";
+      darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
+      darwinUser = "_${darwinGroup}";
       linuxSshdKeysDirName = "linux-sshd-keys";
+      port = 2226;
+      sshGlobalKnownHostsFileName = "ssh_known_hosts";
+      sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
+      sshHostKeyAlias = "${sshHost}-key";
+      workingDirPath = "/var/lib/${name}";
 
-      builderYaml = (pkgs.formats.yaml {}).generate "${hostname}.yaml" {
+      vmYaml = (pkgs.formats.yaml {}).generate "${name}.yaml" {
         cpus = cores;
 
         images = [{
@@ -207,65 +214,77 @@
       };
 
     in {
-      environment.etc."ssh/ssh_config.d/100-${hostname}.conf".text = ''
-        Host "${hostname}"
-          GlobalKnownHostsFile "${workingDirPath}/ssh_known_hosts" # FIXME: variable
+      environment.etc."ssh/ssh_config.d/100-${sshHost}.conf".text = ''
+        Host "${sshHost}"
+          GlobalKnownHostsFile "${workingDirPath}/${sshGlobalKnownHostsFileName}"
           Hostname localhost
-          HostKeyAlias "${hostname}"
+          HostKeyAlias "${sshHostKeyAlias}"
           Port "${port}"
-          User "${user}"
+          User "${linuxUser}"
           IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
       '';
 
-      users.users."${user}" = { # FIXME: separate darwinUser?
-        # createHome = true;
-        # gid = FIXME;
-        # home = workingDirPath;
-        isHidden = true;
-        # uid = FIXME;
+      users = {
+        # FIXME: use?
+        # groups."${darwinGroup}" = {
+        #   # gid = darwinGid; # FIXME
+        # };
+
+        # knownGroups = [ darwinGroup ]; # FIXME: use?
+        # knownUsers = [ darwinUser ]; # FIXME: use?
+
+        users."${darwinUser}" = {
+          # createHome = true; # FIXME: use?
+          # gid = darwinGid; # FIXME: use?
+          # home = workingDirPath; # FIXME: use?
+          isHidden = true;
+          # uid = FIXME; # FIXME: use?
+        };
       };
 
-      launchd.daemons."${hostname}" = {
+      launchd.daemons."${daemonName}" = {
         environment.LIMA_HOME = "lima";
         path = []; # FIXME: fill pkgs.grep? pkgs.lima pkgs.openssh
 
-        script = ''
-          # FIXME: variables
+        script =
+        let
+          vmName = "${name}-vm";
+
+        in ''
           # must be idempotent in the face of partial failues
-          limactl list -q 2>'/dev/null' | grep -q '${hostname}' || {
+          limactl list -q 2>'/dev/null' | grep -q '${vmName}' || {
             ssh-keygen \
-              -C '${user}@darwin' -f '${sshUserPrivateKeyFileName}' -N "" -t '${sshKeyType}'
+              -C '${darwinUser}@darwin' -f '${sshUserPrivateKeyFileName}' -N "" -t '${sshKeyType}'
             ssh-keygen \
-              -C 'root@${hostname}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
+              -C 'root@${linuxHostname}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
 
             mkdir -p '${linuxSshdKeysDirName}'
             mv \
-              '${sshUserPublicKeyFileName}' \
-              '${sshHostPrivateKeyFileName}' \
-              '${linuxSshdKeysDirName}'
+              '${sshUserPublicKeyFileName}' '${sshHostPrivateKeyFileName}' '${linuxSshdKeysDirName}'
 
-            echo "${hostname} $(cat '${sshHostPublicKeyFileName}')" >'ssh_known_hosts'
+            echo "${sshHostKeyAlias} $(cat '${sshHostPublicKeyFileName}')" \
+            >'${sshGlobalKnownHostsFileName}'
 
-            limactl create '${builderYaml}'
+            limactl create --name='${vmName}' '${vmYaml}'
           }
 
-          exec limactl start --foreground '${hostname}'
+          exec limactl start --foreground '${vmName}'
         '';
 
         serviceConfig = {
           KeepAlive = true;
           RunAtLoad = true;
-          UserName = user;
+          UserName = darwinUser;
           WorkingDirectory = workingDirPath;
         } // lib.optionalAttrs debug {
-          StandardErrorPath = "/tmp/${hostname}.err.log";
-          StandardOutPath = "/tmp/${hostname}.out.log";
+          StandardErrorPath = "/tmp/${daemonName}.err.log";
+          StandardOutPath = "/tmp/${daemonName}.out.log";
         };
       };
 
       nix = {
         buildMachines = [{
-          hostName = hostname;
+          hostName = sshHost;
           maxJobs = cores;
           protocol = "ssh-ng";
           supportedFeatures = [ "benchmark" "big-parallel" "kvm" ];
