@@ -249,7 +249,7 @@
 
       launchd.daemons."${daemonName}" = {
         environment.LIMA_HOME = "lima";
-        path = []; # FIXME: fill pkgs.grep? pkgs.lima pkgs.openssh
+        path = [ pkgs.gnugrep pkgs.lima pkgs.openssh ];
 
         script =
         let
