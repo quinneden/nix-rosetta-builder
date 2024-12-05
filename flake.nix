@@ -17,10 +17,14 @@
     linuxPkgs = nixpkgs.legacyPackages."${linuxSystem}";
     lib = nixpkgs.lib;
 
+    cores = 8;
+    hostname = "rosetta-builder";
+    imageFormat = "qcow-efi"; # must match `builderYaml.images.location`s extension
+    port = 2226;
     user = "builder";
 
-    sshdkeysVirtiofsTag = "mount0"; # must match `mounts` order in builder.yaml
-    sshdkeysDirectory = "/var/sshdkeys";
+    sshdkeysVirtiofsTag = "mount0"; # suffix must match `builderYaml.mounts.location`s order
+    guestSshdkeysDirectory = "/var/sshdkeys";
     sshDirectory = "/etc/ssh";
     sshKeyType = "ed25519";
     sshHostKeyFilename = "ssh_host_${sshKeyType}_key";
@@ -32,7 +36,7 @@
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate {
-      format = "qcow-efi";
+      format = imageFormat;
 
       modules = [ {
         imports = [ (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix") ];
@@ -115,27 +119,32 @@
           description = "Install sshd's host and authorized keys";
           requiredBy = [ sshdService ];
 
+          # must be idempotent in the face of partial failues
           script = ''
-            export PATH="${lib.makeBinPath [ linuxPkgs.mount linuxPkgs.umount ]}:$PATH"
+            PATH="${lib.makeBinPath [ linuxPkgs.mount linuxPkgs.umount ]}:$PATH"
+            export PATH
 
-            umask 'go-w'
-
-            mkdir -p '${sshdkeysDirectory}'
+            mkdir -p '${guestSshdkeysDirectory}'
             mount \
               -t 'virtiofs' \
               -o 'nodev,noexec,nosuid,ro' \
               '${sshdkeysVirtiofsTag}' \
-              '${sshdkeysDirectory}'
+              '${guestSshdkeysDirectory}'
 
             mkdir -p "$(dirname '${sshHostKeyPath}')"
-            (umask 'go-rwx' ; cp '${sshdkeysDirectory}/${sshHostKeyFilename}' '${sshHostKeyPath}')
+            (
+              umask 'go-rwx'
+              cp '${guestSshdkeysDirectory}/${sshHostKeyFilename}' '${sshHostKeyPath}'
+            )
 
             mkdir -p "$(dirname '${sshAuthorizedKeysUserPath}')"
-            cp '${sshdkeysDirectory}/${user}_${sshKeyType}.pub' '${sshAuthorizedKeysUserPath}'
+            cp \
+              '${guestSshdkeysDirectory}/${user}_${sshKeyType}.pub' \
+              '${sshAuthorizedKeysUserPath}'
             chmod 'a+r' '${sshAuthorizedKeysUserPath}'
 
-            umount '${sshdkeysDirectory}'
-            rmdir '${sshdkeysDirectory}'
+            umount '${guestSshdkeysDirectory}'
+            rmdir '${guestSshdkeysDirectory}'
           '';
 
           serviceConfig.Type = "oneshot";
@@ -159,5 +168,95 @@
     devShells."${system}".default = pkgs.mkShell { packages = [
       pkgs.lima
     ]; };
+
+    darwinModules.default = { lib, ... }:
+    let
+      workingDirectory = "FIXME";
+
+      builderYaml = (pkgs.formats.yaml {}).generate "${hostname}.yaml" {
+        cpus = cores;
+
+        images = [{
+          # extension must match `imageFormat`
+          location = "${self.packages."${linuxSystem}".default}/nixos.qcow2";
+        }];
+
+        memory = "6GiB";
+
+        mounts = [{
+          # order must match `sshdkeysVirtiofsTag`s suffix 
+          location = "${workingDirectory}/sshdkeys"; # FIXME: variable
+        }];
+
+        rosetta.enabled = true;
+        ssh.localPort = port;
+      };
+
+    in {
+      environment.etc."ssh/ssh_config.d/100-${hostname}.conf".text = ''
+        Host "${hostname}"
+          GlobalKnownHostsFile "${workingDirectory}/ssh_known_hosts" # FIXME: variable
+          Hostname localhost
+          HostKeyAlias "${hostname}"
+          Port "${port}"
+          User "${user}"
+          IdentityFile "${workingDirectory}/${user}_${sshKeyType}" # FIXME: variable
+      '';
+
+      users.users."${user}" = { # FIXME: separate hostUser?
+        # createHome = true;
+        # gid = FIXME;
+        # home = workingDirectory;
+        isHidden = true;
+        # uid = FIXME;
+      };
+
+      launchd.daemons."${hostname}" = {
+        script = ''
+          PATH="${lib.makeBinPath []}:$PATH" # FIXME: fill pkgs.grep? pkgs.lima pkgs.openssh
+          export PATH
+
+          LIMA_HOME='lima'
+          export LIMA_HOME
+
+          # FIXME: variables
+          # must be idempotent in the face of partial failues
+          limactl list -q 2>'/dev/null' | grep -q '${hostname}' || {
+            mkdir -p 'sshdkeys'
+
+            ssh-keygen -C '${user}@localhost' -f '${user}_${sshKeyType}' -N "" -t '${sshKeyType}'
+            ssh-keygen \
+              -C 'root@${hostname}' -f 'ssh_host_${sshKeyType}_key' -N "" -t '${sshKeyType}'
+
+            mv '${user}_${sshKeyType}.pub' 'ssh_host_${sshKeyType}_key' 'sshdkeys'
+            echo "${hostname} $(cat 'ssh_host_${sshKeyType}_key.pub')" >'ssh_known_hosts'
+
+            limactl create '${builderYaml}'
+          }
+
+          exec limactl start --foreground '${hostname}'
+        '';
+
+        serviceConfig = {
+          KeepAlive = true;
+          RunAtLoad = true;
+          UserName = user;
+          WorkingDirectory = workingDirectory;
+        };
+      };
+
+      nix = {
+        buildMachines = [{
+          hostName = hostname;
+          sshUser = user; # FIXME: separate hostUser from guestUser
+          sshKey = "${workingDirectory}/${user}_${sshKeyType}"; # FIXME: variabls
+          inherit (cfg) mandatoryFeatures maxJobs protocol speedFactor supportedFeatures systems;
+        }];
+
+        distributedBuilds = true;
+        settings.builders-use-substitutes = true;
+      };
+
+    };
   };
 }
