@@ -117,6 +117,7 @@
         systemd.services.sshdkeys = {
           before = [ sshdService ];
           description = "Install sshd's host and authorized keys";
+          enableStrictShellChecks = true;
           path = [ linuxPkgs.mount linuxPkgs.umount ];
           requiredBy = [ sshdService ];
 
@@ -237,6 +238,9 @@
           RunAtLoad = true;
           UserName = user;
           WorkingDirectory = workingDirectory;
+        } // lib.optionalAttrs debug {
+          StandardErrorPath = "/tmp/${hostname}.err.log";
+          StandardOutPath = "/tmp/${hostname}.out.log";
         };
       };
 
