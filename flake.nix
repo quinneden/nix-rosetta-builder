@@ -188,7 +188,7 @@
       darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
       darwinUser = "_${darwinGroup}";
       linuxSshdKeysDirName = "linux-sshd-keys";
-      port = 2226;
+      port = 31122;
       sshGlobalKnownHostsFileName = "ssh_known_hosts";
       sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
       sshHostKeyAlias = "${sshHost}-key";
