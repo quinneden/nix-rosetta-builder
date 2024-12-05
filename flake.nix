@@ -16,7 +16,7 @@
     lib = nixpkgs.lib;
 
     name = "rosetta-builder"; # update `darwinGroup` if adding or removing special characters
-    linuxHostname = name; # no prefix because it's user visible (on prompt when `ssh`d in)
+    linuxHostName = name; # no prefix because it's user visible (on prompt when `ssh`d in)
     linuxUser = "builder"; # follow linux-builder/darwin-builder precedent
 
     sshKeyType = "ed25519";
@@ -59,7 +59,7 @@
           "/boot".options = [ "discard" "noatime" "umask=0077" ];
         };
 
-        networking.hostname = linuxHostname;
+        networking.hostName = linuxHostName;
 
         nix = {
           channel.enable = false;
@@ -257,7 +257,7 @@
             ssh-keygen \
               -C '${darwinUser}@darwin' -f '${sshUserPrivateKeyFileName}' -N "" -t '${sshKeyType}'
             ssh-keygen \
-              -C 'root@${linuxHostname}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
+              -C 'root@${linuxHostName}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
 
             mkdir -p '${linuxSshdKeysDirName}'
             mv \
