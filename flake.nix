@@ -22,7 +22,7 @@
     sshKeyType = "ed25519";
     sshHostPrivateKeyFileName = "ssh_host_${sshKeyType}_key";
     sshHostPublicKeyFileName = "${sshHostPrivateKeyFileName}.pub";
-    sshUserPrivateKeyFileName = "$ssh_user_${sshKeyType}";
+    sshUserPrivateKeyFileName = "ssh_user_${sshKeyType}";
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = true; # FIXME: disable
