@@ -41,8 +41,6 @@
       format = imageFormat;
 
       modules = [ {
-        imports = [ (nixpkgs + "/nixos/modules/profiles/qemu-guest.nix") ];
-
         boot = {
           kernelParams = [ "console=tty0" ];
 
