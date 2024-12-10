@@ -25,7 +25,7 @@
     sshUserPrivateKeyFileName = "ssh_user_${sshKeyType}_key";
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
-    debug = true; # FIXME: disable
+    debug = false; # enable root access in VM and debug logging
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate (
