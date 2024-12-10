@@ -251,7 +251,7 @@
       };
 
       launchd.daemons."${daemonName}" = {
-        environment.LIMA_HOME = "lima";
+        environment.LIMA_HOME = "${workingDirPath}/lima";
         path = [ "/usr/bin" "/bin" pkgs.lima ];
 
         script =
