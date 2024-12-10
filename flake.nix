@@ -158,9 +158,14 @@
           unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}";
         };
 
-        users.users."${linuxUser}" = {
-          isNormalUser = true;
-          extraGroups = lib.optionals debug [ "wheel" ];
+        users = {
+          allowNoPasswordLogin = true;
+          mutableUsers = false;
+
+          users."${linuxUser}" = {
+            isNormalUser = true;
+            extraGroups = lib.optionals debug [ "wheel" ];
+          };
         };
 
         virtualisation.rosetta = {
