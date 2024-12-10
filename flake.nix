@@ -279,7 +279,7 @@
             limactl create --name='${vmName}' '${vmYaml}'
           }
 
-          exec limactl start --debug --foreground '${vmName}' # FIXME: remove debug
+          exec limactl start ${lib.optionalString debug "--debug"} --foreground '${vmName}'
         '';
 
         serviceConfig = {
