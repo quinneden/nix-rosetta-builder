@@ -230,8 +230,8 @@
 
       users =
       let
-        darwinGid = 340;
-        darwinUid = darwinGid + 1;
+        darwinGid = 349;
+        darwinUid = darwinGid;
 
       in {
         groups."${darwinGroup}" = {
