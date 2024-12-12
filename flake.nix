@@ -243,7 +243,6 @@
         knownUsers = [ darwinUser ];
 
         users."${darwinUser}" = {
-          createHome = true;
           gid = darwinGid;
           home = workingDirPath;
           isHidden = true;
@@ -308,6 +307,18 @@
         distributedBuilds = true;
         settings.builders-use-substitutes = true;
       };
+
+      system.activationScripts.extraActivation.text =
+      let
+        groupSh = lib.escapeShellArg darwinGroup;
+        userSh = lib.escapeShellArg darwinUser;
+        workingDirPathSh = lib.escapeShellArg workingDirPath;
+
+      in lib.mkAfter ''
+        printf >&2 'setting up working directory %s...\n' ${workingDirPathSh}
+        mkdir -p ${workingDirPathSh}
+        chown ${userSh}:${groupSh} ${workingDirPathSh}
+      '';
 
     };
   };
