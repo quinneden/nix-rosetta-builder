@@ -252,8 +252,7 @@
       };
 
       launchd.daemons."${daemonName}" = {
-        environment.LIMA_HOME = "${workingDirPath}/lima";
-        path = [ "/usr/bin" "/bin" pkgs.lima ];
+        path = [ pkgs.coreutils pkgs.gnugrep pkgs.lima pkgs.openssh "/usr/bin/" ];
 
         script =
         let
