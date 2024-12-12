@@ -198,6 +198,7 @@
       workingDirPath = "/var/lib/${name}";
 
       vmYaml = (pkgs.formats.yaml {}).generate "${name}.yaml" {
+        containerd.user = false;
         cpus = cores;
 
         images = [{
