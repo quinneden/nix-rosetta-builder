@@ -142,7 +142,7 @@
 
             mkdir -p "$(dirname '${sshHostPrivateKeyFilePath}')"
             (
-              umask 'go-rwx'
+              umask 'go='
               cp '${sshdKeysDirPath}/${sshHostPrivateKeyFileName}' '${sshHostPrivateKeyFilePath}'
             )
 
@@ -261,6 +261,9 @@
         in ''
           set -e
           set -u
+
+          umask 'g-w,o='
+          chmod 'g-w,o=' .
 
           # must be idempotent in the face of partial failues
           limactl list -q 2>'/dev/null' | grep -q '${vmName}' || {
