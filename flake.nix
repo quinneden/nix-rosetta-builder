@@ -305,7 +305,11 @@
         gidSh = lib.escapeShellArg (toString darwinGid);
         groupSh = lib.escapeShellArg darwinGroup;
         groupPathSh = lib.escapeShellArg "/Groups/${darwinGroup}";
+
+        uidSh = lib.escapeShellArg (toString darwinUid);
         userSh = lib.escapeShellArg darwinUser;
+        userPathSh = lib.escapeShellArg "/Users/${darwinUser}";
+
         workingDirPathSh = lib.escapeShellArg workingDirPath;
 
       in lib.mkAfter ''
@@ -322,6 +326,26 @@
           exit 1
         fi
         unset 'primaryGroupId'
+
+
+        printf >&2 'setting up user %s...\n' ${userSh}
+
+        if ! uid="$(id -u ${userSh} 2>'/dev/null')" ; then
+          printf >&2 'creating user %s...\n' ${userSh}
+          dscl . -create ${userPathSh}
+          dscl . -create ${userPathSh} 'PrimaryGroupID' ${gidSh}
+          dscl . -create ${userPathSh} 'NFSHomeDirectory' ${workingDirPathSh}
+          dscl . -create ${userPathSh} 'UserShell' '/usr/bin/false'
+          dscl . -create ${userPathSh} 'IsHidden' 1
+          dscl . -create ${userPathSh} 'UniqueID' ${uidSh} # must be last so `id` only now succeeds
+        elif [ "$uid" -ne ${uidSh} ] ; then
+          printf >&2 \
+            '\e[1;31merror: existing user: %s has unexpected UID: %s\e[0m\n' \
+            ${userSh} \
+            "$uid"
+          exit 1
+        fi
+        unset 'uid'
 
 
         printf >&2 'setting up working directory %s...\n' ${workingDirPathSh}
