@@ -188,7 +188,9 @@
     let
       cores = 8;
       daemonName = "${name}d";
+      darwinGid = 349;
       darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
+      darwinUid = darwinGid;
       darwinUser = "_${darwinGroup}";
       linuxSshdKeysDirName = "linux-sshd-keys";
       port = 31122;
@@ -229,17 +231,7 @@
           IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
       '';
 
-      users =
-      let
-        darwinGid = 349;
-        darwinUid = darwinGid;
-
-      in {
-        groups."${darwinGroup}" = {
-          gid = darwinGid;
-        };
-
-        knownGroups = [ darwinGroup ];
+      users = {
         knownUsers = [ darwinUser ];
 
         users."${darwinUser}" = {
@@ -310,11 +302,28 @@
 
       system.activationScripts.extraActivation.text =
       let
+        gidSh = lib.escapeShellArg (toString darwinGid);
         groupSh = lib.escapeShellArg darwinGroup;
+        groupPathSh = lib.escapeShellArg "/Groups/${darwinGroup}";
         userSh = lib.escapeShellArg darwinUser;
         workingDirPathSh = lib.escapeShellArg workingDirPath;
 
       in lib.mkAfter ''
+        printf >&2 'setting up group %s...\n' ${groupSh}
+
+        if ! primaryGroupId="$(dscl . -read ${groupPathSh} 'PrimaryGroupID' 2>'/dev/null')" ; then
+          printf >&2 'creating group %s...\n' ${groupSh}
+          dscl . -create ${groupPathSh} 'PrimaryGroupID' ${gidSh}
+        elif [[ "$primaryGroupId" != *\ ${gidSh} ]] ; then
+          printf >&2 \
+            '\e[1;31merror: existing group: %s has unexpected %s\e[0m\n' \
+            ${groupSh} \
+            "$primaryGroupId"
+          exit 1
+        fi
+        unset 'primaryGroupId'
+
+
         printf >&2 'setting up working directory %s...\n' ${workingDirPathSh}
         mkdir -p ${workingDirPathSh}
         chown ${userSh}:${groupSh} ${workingDirPathSh}
