@@ -1,37 +1,39 @@
 # rosetta-builder
 
-Lima-based, Rosetta 2-enabled, Apple silicon (macOS/Darwin)-hosted Linux builder.
+A Rosetta 2-enabled, Apple silicon (macOS/Darwin)-hosted Linux Nix builder.
 
-## Setup
+Runs on aarch64-darwin and builds aarch64-linux (natively) and x86_64-linux (using Rosetta 2).
 
-Build image:
-```sh
-nix build '.#packages.aarch64-linux.default'
+## nix-darwin flake setup
+
+flake.nix:
+```nix
+{
+  description = "Configure macOS using nix-darwin with rosetta-builder";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nix-darwin = {
+      url = "github:lnl7/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-rosetta-builder = {
+      url = "github:cpick/nix-rosetta-builder";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = inputs@{ self, nix-darwin, nix-rosetta-builder, nixpkgs }: {
+    darwinConfigurations."${hostname}" = nix-darwin.lib.darwinSystem {
+      modules = [ nix-rosetta-builder.darwinModules.default ];
+    };
+  };
+}
 ```
 
-```sh
-mkdir -p ~/rosetta-builder/ssh{,d}keys
-ssh-keygen -C 'builder@localhost' -f ~/rosetta-builder/builder_ed25519 -N '' -t ed25519
-ssh-keygen -C 'root@rosetta-builer' -f ~/rosetta-builder/ssh_host_ed25519_key -N '' -t ed25519
-mv ~/rosetta-builder/builder_ed25519 ~/rosetta-builder/ssh_host_ed25519_key.pub ~/rosetta-builder/sshkeys/
-mv ~/rosetta-builder/builder_ed25519.pub ~/rosetta-builder/ssh_host_ed25519_key ~/rosetta-builder/sshdkeys/
-```
+# Uninstall
 
-## Usage
-
-Create and start VM (optionally add `--video` for console):
+Remove `nix-rosetta-builder` from nix-darwin's flake.nix, `darwin-rebuild`, and then:
 ```sh
-limactl start --tty=false --foreground builder.yaml
-```
-Periodic informational messages like the following are expected:
-> Waiting for the essential requirement 1 of 2: "ssh" ...
-
-SSH:
-```sh
-ssh -p 2226 -i ~/rosetta-builder/sshkeys/builder_ed25519 builder@localhost
-```
-
-Delete VM:
-```sh
-limactl delete -f builder
+sudo rm -r /var/lib/rosetta-builder
 ```
