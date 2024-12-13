@@ -129,6 +129,8 @@
           script =
           let
             sshAuthorizedKeysUserFilePathSh = lib.escapeShellArg sshAuthorizedKeysUserFilePath;
+            sshAuthorizedKeysUserTmpFilePathSh =
+              lib.escapeShellArg "${sshAuthorizedKeysUserFilePath}.tmp";
             sshHostPrivateKeyFileNameSh = lib.escapeShellArg sshHostPrivateKeyFileName;
             sshHostPrivateKeyFilePathSh = lib.escapeShellArg sshHostPrivateKeyFilePath;
             sshUserPublicKeyFileNameSh = lib.escapeShellArg sshUserPublicKeyFileName;
@@ -151,16 +153,23 @@
               cp ${sshdKeysDirPathSh}/${sshHostPrivateKeyFileNameSh} ${sshHostPrivateKeyFilePathSh}
             )
 
-            mkdir -p "$(dirname ${sshAuthorizedKeysUserFilePathSh})"
-            cp ${sshdKeysDirPathSh}/${sshUserPublicKeyFileNameSh} ${sshAuthorizedKeysUserFilePathSh}
-            chmod 'a+r' ${sshAuthorizedKeysUserFilePathSh}
+            mkdir -p "$(dirname ${sshAuthorizedKeysUserTmpFilePathSh})"
+            cp \
+              ${sshdKeysDirPathSh}/${sshUserPublicKeyFileNameSh} \
+              ${sshAuthorizedKeysUserTmpFilePathSh}
+            chmod 'a+r' ${sshAuthorizedKeysUserTmpFilePathSh}
 
             umount ${sshdKeysDirPathSh}
             rmdir ${sshdKeysDirPathSh}
+
+            # must be last so only now `unitConfig.ConditionPathExists` triggers
+            mv ${sshAuthorizedKeysUserTmpFilePathSh} ${sshAuthorizedKeysUserFilePathSh}
           '';
 
           serviceConfig.Type = "oneshot";
-          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}"; # see comment above
+
+          # see comments on this service and in its `script`
+          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}";
         };
 
         users = {
