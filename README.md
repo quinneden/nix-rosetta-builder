@@ -1,8 +1,25 @@
-# rosetta-builder
+# nix-rosetta-builder
 
-A Rosetta 2-enabled, Apple silicon (macOS/Darwin)-hosted Linux Nix builder.
+A [Rosetta 2](https://developer.apple.com/documentation/virtualization/running_intel_binaries_in_linux_vms_with_rosetta)-enabled,
+Apple silicon (macOS/Darwin)-hosted Linux
+[Nix builder](https://nix.dev/manual/nix/2.18/advanced-topics/distributed-builds).
 
-Runs on aarch64-darwin and builds aarch64-linux (natively) and x86_64-linux (using Rosetta 2).
+Runs on aarch64-darwin and builds aarch64-linux (natively) and x86_64-linux (quickly using Rosetta
+2).
+
+## Features
+
+Advantages over nix-darwin's built in
+[`nix.linux-builder`](https://daiderd.com/nix-darwin/manual/index.html#opt-nix.linux-builder.enable)
+(which is based on
+[`pkgs.darwin.linux-builder`](https://nixos.org/manual/nixpkgs/stable/#sec-darwin-builder)):
+
+* x86_64-linux support enabled by default and much faster (using Rosetta 2)
+* Multi-core by default
+* More secure:
+  * VM runs with minimum permissions (runs as a non-root/admin/wheel user/service account)
+  * VM doesn't accept remote connections (it binds to the loopback interface (127.0.0.1))
+  * VM cannot be impersonated (its private SSH host key is not publicly-known)
 
 ## nix-darwin flake setup
 
@@ -31,9 +48,14 @@ flake.nix:
 }
 ```
 
-# Uninstall
+## Uninstall
 
 Remove `nix-rosetta-builder` from nix-darwin's flake.nix, `darwin-rebuild`, and then:
 ```sh
 sudo rm -r /var/lib/rosetta-builder
 ```
+
+## Contributing
+
+Feature requests, bug reports, and pull requests are all welcome.
+
