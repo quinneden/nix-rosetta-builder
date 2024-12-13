@@ -98,9 +98,23 @@
           stateVersion = "24.05";
         };
 
+        # macOS' Virtualization framework's virtiofs implementation will grant any guest user access
+        # to mounted files; they always appear to be owned by the effective UID and so access cannot
+        # be restricted.
+        # To protect the guest's SSH host key, the VM is configured to prevent any logins (via
+        # console, SSH, etc) by default.  This service then runs before sshd, mounts virtiofs,
+        # copies the keys to local files (with appropriate ownership and permissions), and unmounts
+        # the filesystem before allowing SSH to start.
+        # Once SSH has been allowed to start (and given the guest user a chance to log in), the
+        # virtiofs must never be mounted again (as the user could have left some process active to
+        # read its secrets).  This is prevented by `unitconfig.ConditionPathExists` below.
         systemd.services."${sshdKeys}" =
         let
-          sshdKeysVirtiofsTag = "mount0"; # suffix must match `vmYaml.mounts.location`s order
+          # Lima labels its virtiofs folder mounts counting up:
+          # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/vz/vm_darwin.go#L568
+          # So this suffix must match `vmYaml.mounts.location`s order:
+          sshdKeysVirtiofsTag = "mount0";
+
           sshdKeysDirPath = "/var/${sshdKeys}";
           sshAuthorizedKeysUserFilePath = "${sshDirPath}/authorized_keys.d/${linuxUser}";
           sshdService = "sshd.service";
@@ -112,7 +126,6 @@
           path = [ pkgs.mount pkgs.umount ];
           requiredBy = [ sshdService ];
 
-          # must be idempotent in the face of partial failues
           script =
           let
             sshAuthorizedKeysUserFilePathSh = lib.escapeShellArg sshAuthorizedKeysUserFilePath;
@@ -123,6 +136,8 @@
             sshdKeysVirtiofsTagSh = lib.escapeShellArg sshdKeysVirtiofsTag;
 
           in ''
+            # must be idempotent in the face of partial failues
+
             mkdir -p ${sshdKeysDirPathSh}
             mount \
               -t 'virtiofs' \
@@ -145,11 +160,14 @@
           '';
 
           serviceConfig.Type = "oneshot";
-          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}";
+          unitConfig.ConditionPathExists = "!${sshAuthorizedKeysUserFilePath}"; # see comment above
         };
 
         users = {
+          # console and (initial) SSH logins are purposely disabled
+          # see: `systemd.services."${sshdKeys}"`
           allowNoPasswordLogin = true;
+
           mutableUsers = false;
 
           users."${linuxUser}" = {
@@ -160,6 +178,9 @@
 
         virtualisation.rosetta = {
           enable = true;
+
+          # Lima's virtiofs label for rosetta:
+          # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/vz/rosetta_directory_share_arm64.go#L15
           mountTag = "vz-rosetta";
         };
       } ];
@@ -178,19 +199,37 @@
     let
       cores = 8;
       daemonName = "${name}d";
+
+      # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
+      # in the 200-400 range `mkuser`s README.md mentions the same:
+      # https://github.com/freegeek-pdx/mkuser/blob/b7a7900d2e6ef01dfafad1ba085c94f7302677d9/README.md?plain=1#L413-L437
+      # Determinate's `nix-installer` (and, I believe, current versions of the official one) uses a
+      # variable number starting at 350 and up:
+      # https://github.com/DeterminateSystems/nix-installer/blob/6beefac4d23bd9a0b74b6758f148aa24d6df3ca9/README.md?plain=1#L511-L514
+      # Meanwhile, new macOS versions are installing accounts that encroach from below.
+      # Try to fit in between:
       darwinGid = 349;
-      darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
       darwinUid = darwinGid;
+
+      darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
       darwinUser = "_${darwinGroup}";
       linuxSshdKeysDirName = "linux-sshd-keys";
+
+      # `nix.linux-builder` uses 31022:
+      # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/nix/linux-builder.nix#L199
+      # Use a similar, but different one:
       port = 31122;
+
       sshGlobalKnownHostsFileName = "ssh_known_hosts";
       sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
       sshHostKeyAlias = "${sshHost}-key";
       workingDirPath = "/var/lib/${name}";
 
       vmYaml = (pkgs.formats.yaml {}).generate "${name}.yaml" {
+        # Prevent ~200MiB unused nerdctl-full*.tar.gz download
+        # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/instance/start.go#L43
         containerd.user = false;
+
         cpus = cores;
 
         images = [{
@@ -222,7 +261,18 @@
       '';
 
       launchd.daemons."${daemonName}" = {
-        path = [ pkgs.coreutils pkgs.gnugrep pkgs.lima pkgs.openssh "/usr/bin/" ];
+        path = [
+          pkgs.coreutils
+          pkgs.gnugrep
+          pkgs.lima
+          pkgs.openssh
+
+          # Lima calls `sw_vers` which is not packaged in Nix:
+          # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/osutil/osversion_darwin.go#L13
+          # If the call fails it will not use the Virtualization framework bakend (by default? among
+          # other things?).
+          "/usr/bin/"
+        ];
 
         script =
         let
@@ -260,6 +310,7 @@
             echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
             >${sshGlobalKnownHostsFileNameSh}
 
+            # must be last so `limactl list` only now succeeds
             limactl create --name=${vmNameSh} ${vmYamlSh}
           }
 
@@ -290,6 +341,12 @@
         settings.builders-use-substitutes = true;
       };
 
+      # `users.users` cannot create a service account and cannot create an empty home directory so do it
+      # manually in an activation script.  This `extraActivation` was chosen in particiular because it's one of the system level (as opposed to user level) ones that's been set aside for customization:
+      # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L121-L125
+      # And of those, it's the one that's executed latest but still before
+      # `activationScripts.launchd` which needs the group, user, and directory in place:
+      # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L58-L66
       system.activationScripts.extraActivation.text =
       let
         gidSh = lib.escapeShellArg (toString darwinGid);
@@ -302,6 +359,7 @@
 
         workingDirPathSh = lib.escapeShellArg workingDirPath;
 
+      # apply "after" to work cooperatively with any other modules using this activation script
       in lib.mkAfter ''
         printf >&2 'setting up group %s...\n' ${groupSh}
 
