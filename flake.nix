@@ -132,26 +132,35 @@
           requiredBy = [ sshdService ];
 
           # must be idempotent in the face of partial failues
-          script = ''
-            mkdir -p '${sshdKeysDirPath}'
+          script =
+          let
+            sshAuthorizedKeysUserFilePathSh = lib.escapeShellArg sshAuthorizedKeysUserFilePath;
+            sshHostPrivateKeyFileNameSh = lib.escapeShellArg sshHostPrivateKeyFileName;
+            sshHostPrivateKeyFilePathSh = lib.escapeShellArg sshHostPrivateKeyFilePath;
+            sshUserPublicKeyFileNameSh = lib.escapeShellArg sshUserPublicKeyFileName;
+            sshdKeysDirPathSh = lib.escapeShellArg sshdKeysDirPath;
+            sshdKeysVirtiofsTagSh = lib.escapeShellArg sshdKeysVirtiofsTag;
+
+          in ''
+            mkdir -p ${sshdKeysDirPathSh}
             mount \
               -t 'virtiofs' \
               -o 'nodev,noexec,nosuid,ro' \
-              '${sshdKeysVirtiofsTag}' \
-              '${sshdKeysDirPath}'
+              ${sshdKeysVirtiofsTagSh} \
+              ${sshdKeysDirPathSh}
 
-            mkdir -p "$(dirname '${sshHostPrivateKeyFilePath}')"
+            mkdir -p "$(dirname ${sshHostPrivateKeyFilePathSh})"
             (
               umask 'go='
-              cp '${sshdKeysDirPath}/${sshHostPrivateKeyFileName}' '${sshHostPrivateKeyFilePath}'
+              cp ${sshdKeysDirPathSh}/${sshHostPrivateKeyFileNameSh} ${sshHostPrivateKeyFilePathSh}
             )
 
-            mkdir -p "$(dirname '${sshAuthorizedKeysUserFilePath}')"
-            cp '${sshdKeysDirPath}/${sshUserPublicKeyFileName}' '${sshAuthorizedKeysUserFilePath}'
-            chmod 'a+r' '${sshAuthorizedKeysUserFilePath}'
+            mkdir -p "$(dirname ${sshAuthorizedKeysUserFilePathSh})"
+            cp ${sshdKeysDirPathSh}/${sshUserPublicKeyFileNameSh} ${sshAuthorizedKeysUserFilePathSh}
+            chmod 'a+r' ${sshAuthorizedKeysUserFilePathSh}
 
-            umount '${sshdKeysDirPath}'
-            rmdir '${sshdKeysDirPath}'
+            umount ${sshdKeysDirPathSh}
+            rmdir ${sshdKeysDirPathSh}
           '';
 
           serviceConfig.Type = "oneshot";
