@@ -247,7 +247,18 @@
 
         script =
         let
-          vmName = "${name}-vm";
+          darwinUserSh = lib.escapeShellArg darwinUser;
+          linuxHostNameSh = lib.escapeShellArg linuxHostName;
+          linuxSshdKeysDirNameSh = lib.escapeShellArg linuxSshdKeysDirName;
+          sshGlobalKnownHostsFileNameSh = lib.escapeShellArg sshGlobalKnownHostsFileName;
+          sshHostKeyAliasSh = lib.escapeShellArg sshHostKeyAlias;
+          sshHostPrivateKeyFileNameSh = lib.escapeShellArg sshHostPrivateKeyFileName;
+          sshHostPublicKeyFileNameSh = lib.escapeShellArg sshHostPublicKeyFileName;
+          sshKeyTypeSh = lib.escapeShellArg sshKeyType;
+          sshUserPrivateKeyFileNameSh = lib.escapeShellArg sshUserPrivateKeyFileName;
+          sshUserPublicKeyFileNameSh = lib.escapeShellArg sshUserPublicKeyFileName;
+          vmNameSh = lib.escapeShellArg "${name}-vm";
+          vmYamlSh = lib.escapeShellArg vmYaml;
 
         in ''
           set -e
@@ -257,23 +268,23 @@
           chmod 'g-w,o=' .
 
           # must be idempotent in the face of partial failues
-          limactl list -q 2>'/dev/null' | grep -q '${vmName}' || {
+          limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} || {
             yes | ssh-keygen \
-              -C '${darwinUser}@darwin' -f '${sshUserPrivateKeyFileName}' -N "" -t '${sshKeyType}'
+              -C ${darwinUserSh}@darwin -f ${sshUserPrivateKeyFileNameSh} -N "" -t ${sshKeyTypeSh}
             yes | ssh-keygen \
-              -C 'root@${linuxHostName}' -f '${sshHostPrivateKeyFileName}' -N "" -t '${sshKeyType}'
+              -C root@${linuxHostNameSh} -f ${sshHostPrivateKeyFileNameSh} -N "" -t ${sshKeyTypeSh}
 
-            mkdir -p '${linuxSshdKeysDirName}'
+            mkdir -p ${linuxSshdKeysDirNameSh}
             mv \
-              '${sshUserPublicKeyFileName}' '${sshHostPrivateKeyFileName}' '${linuxSshdKeysDirName}'
+              ${sshUserPublicKeyFileNameSh} ${sshHostPrivateKeyFileNameSh} ${linuxSshdKeysDirNameSh}
 
-            echo "${sshHostKeyAlias} $(cat '${sshHostPublicKeyFileName}')" \
-            >'${sshGlobalKnownHostsFileName}'
+            echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
+            >${sshGlobalKnownHostsFileNameSh}
 
-            limactl create --name='${vmName}' '${vmYaml}'
+            limactl create --name=${vmNameSh} ${vmYamlSh}
           }
 
-          exec limactl start ${lib.optionalString debug "--debug"} --foreground '${vmName}'
+          exec limactl start ${lib.optionalString debug "--debug"} --foreground ${vmNameSh}
         '';
 
         serviceConfig = {
