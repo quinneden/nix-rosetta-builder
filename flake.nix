@@ -240,17 +240,6 @@
           IdentityFile "${workingDirPath}/${sshUserPrivateKeyFileName}"
       '';
 
-      users = {
-        knownUsers = [ darwinUser ];
-
-        users."${darwinUser}" = {
-          gid = darwinGid;
-          home = workingDirPath;
-          isHidden = true;
-          uid = darwinUid;
-        };
-      };
-
       launchd.daemons."${daemonName}" = {
         path = [ pkgs.coreutils pkgs.gnugrep pkgs.lima pkgs.openssh "/usr/bin/" ];
 
