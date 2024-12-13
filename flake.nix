@@ -73,25 +73,6 @@
         };
 
         security = {
-          polkit = lib.optionalAttrs debug {
-            enable = true;
-            extraConfig = ''
-              polkit.addRule(function(action, subject) {
-                if (
-                  (
-                    action.id === "org.freedesktop.login1.power-off"
-                    || action.id === "org.freedesktop.login1.reboot"
-                  )
-                  && subject.user === "${linuxUser}"
-                ) {
-                  return "yes";
-                } else {
-                  return "no";
-                }
-              })
-            '';
-          };
-
           sudo = {
             enable = debug;
             wheelNeedsPassword = !debug;

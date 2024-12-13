@@ -53,6 +53,8 @@ flake.nix:
 Remove `nix-rosetta-builder` from nix-darwin's flake.nix, `darwin-rebuild`, and then:
 ```sh
 sudo rm -r /var/lib/rosetta-builder
+sudo dscl . -delete /Users/_rosettabuilder
+sudo dscl . -delete /Groups/rosettabuilder
 ```
 
 ## Contributing
