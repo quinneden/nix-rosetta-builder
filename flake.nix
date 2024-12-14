@@ -280,7 +280,7 @@
           # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/osutil/osversion_darwin.go#L13
           # If the call fails it will not use the Virtualization framework bakend (by default? among
           # other things?).
-          "/usr/bin/"
+          "/usr/bin"
         ];
 
         script =
