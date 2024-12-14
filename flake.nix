@@ -26,6 +26,7 @@
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = false; # enable root access in VM and debug logging
+    socketActivation = false; # enable launchd socket activation
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate (
@@ -208,6 +209,7 @@
     let
       cores = 8;
       daemonName = "${name}d";
+      daemonSocketName = "Listener";
 
       # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
       # in the 200-400 range `mkuser`s README.md mentions the same:
@@ -254,7 +256,10 @@
         }];
 
         rosetta.enabled = true;
-        ssh.localPort = port;
+        ssh = {
+          launchdSocketName = lib.optionalString socketActivation daemonSocketName;
+          localPort = port;
+        };
       };
 
     in {
@@ -273,7 +278,16 @@
         path = [
           pkgs.coreutils
           pkgs.gnugrep
-          pkgs.lima
+          (pkgs.lima.overrideAttrs (old: {
+            src = pkgs.fetchFromGitHub {
+              owner = "cpick";
+              repo = "lima";
+              rev = "afbfdfb8dd5fa370547b7fc64a16ce2a354b1ff0";
+              hash = "sha256-tCildZJp6ls+WxRAbkoeLRb4WdroBYn/gvE5Vb8Hm5A=";
+            };
+
+            vendorHash = "sha256-I84971WovhJL/VO/Ycu12qa9lDL3F9USxlt9rXcsnTU=";
+          }))
           pkgs.openssh
 
           # Lima calls `sw_vers` which is not packaged in Nix:
@@ -327,8 +341,14 @@
         '';
 
         serviceConfig = {
-          KeepAlive = true;
-          RunAtLoad = true;
+          KeepAlive = !socketActivation;
+
+          Sockets."${daemonSocketName}" = lib.optionalAttrs socketActivation {
+            SockFamily = "IPv4";
+            SockNodeName = "localhost";
+            SockServiceName = toString port;
+          };
+
           UserName = darwinUser;
           WorkingDirectory = workingDirPath;
         } // lib.optionalAttrs debug {
