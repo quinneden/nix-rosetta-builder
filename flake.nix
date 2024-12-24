@@ -26,7 +26,7 @@
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = false; # enable root access in VM and debug logging
-    socketActivation = false; # enable launchd socket activation
+    socketActivation = true; # enable launchd socket activation
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate (
