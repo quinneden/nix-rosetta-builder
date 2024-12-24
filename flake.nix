@@ -83,6 +83,13 @@
         services = {
           getty = lib.optionalAttrs debug { autologinUser = linuxUser; };
 
+          logind = lib.optionalAttrs socketActivation {
+            extraConfig = ''
+              IdleAction=poweroff
+              IdleActionSec=3h
+            '';
+          };
+
           openssh = {
             enable = true;
             hostKeys = []; # disable automatic host key generation
