@@ -26,7 +26,7 @@
     sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
     debug = false; # enable root access in VM and debug logging
-    socketActivation = true; # enable launchd socket activation
+    onDemand = true; # enable launchd socket activation
 
   in {
     packages."${linuxSystem}".default = nixos-generators.nixosGenerate (
@@ -83,7 +83,7 @@
         services = {
           getty = lib.optionalAttrs debug { autologinUser = linuxUser; };
 
-          logind = lib.optionalAttrs socketActivation {
+          logind = lib.optionalAttrs onDemand {
             extraConfig = ''
               IdleAction=poweroff
               IdleActionSec=3h
@@ -264,7 +264,7 @@
 
         rosetta.enabled = true;
         ssh = {
-          launchdSocketName = lib.optionalString socketActivation daemonSocketName;
+          launchdSocketName = lib.optionalString onDemand daemonSocketName;
           localPort = port;
         };
       };
@@ -348,9 +348,9 @@
         '';
 
         serviceConfig = {
-          KeepAlive = !socketActivation;
+          KeepAlive = !onDemand;
 
-          Sockets."${daemonSocketName}" = lib.optionalAttrs socketActivation {
+          Sockets."${daemonSocketName}" = lib.optionalAttrs onDemand {
             SockFamily = "IPv4";
             SockNodeName = "localhost";
             SockServiceName = toString port;
