@@ -181,7 +181,9 @@ in {
   };
 
   # `users.users` cannot create a service account and cannot create an empty home directory so do it
-  # manually in an activation script.  This `extraActivation` was chosen in particiular because it's one of the system level (as opposed to user level) ones that's been set aside for customization:
+  # manually in an activation script.  This `extraActivation` was chosen in particiular because
+  # it's one of the system level (as opposed to user level) ones that's been set aside for
+  # customization:
   # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L121-L125
   # And of those, it's the one that's executed latest but still before
   # `activationScripts.launchd` which needs the group, user, and directory in place:
