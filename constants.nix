@@ -10,5 +10,4 @@ rec {
   sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
   debug = false; # enable root access in VM and debug logging
-  onDemand = true; # enable launchd socket activation
 }

@@ -16,11 +16,11 @@ let
     sshUserPublicKeyFileName
 
     debug
-    onDemand
     ;
   cores = 8;
   daemonName = "${name}d";
   daemonSocketName = "Listener";
+  inherit (package) onDemand;
 
   # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
   # in the 200-400 range `mkuser`s README.md mentions the same:
@@ -55,8 +55,7 @@ let
     cpus = cores;
 
     images = [{
-      # extension must match `imageFormat`
-      location = "${package}/nixos.qcow2";
+      location = "${package}/nixos.qcow2"; # extension must match `imageFormat`
     }];
 
     memory = "6GiB";

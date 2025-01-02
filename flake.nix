@@ -16,10 +16,14 @@
     lib = nixpkgs.lib;
 
   in {
-    packages."${linuxSystem}".default =
-      nixpkgs.legacyPackages."${linuxSystem}".callPackage ./package.nix {
-        inherit linuxSystem nixos-generators nixpkgs;
-      };
+    packages."${linuxSystem}" =
+    let
+      arguments = { inherit linuxSystem nixos-generators nixpkgs; };
+      pkgs = nixpkgs.legacyPackages."${linuxSystem}";
+    in {
+      default = pkgs.callPackage ./package.nix (arguments // { onDemand = false; });
+      on-demand = pkgs.callPackage ./package.nix (arguments // { onDemand = true; });
+    };
 
     devShells."${darwinSystem}".default =
     let
@@ -28,9 +32,13 @@
       packages = [ pkgs.lima ];
     };
 
-    darwinModules.default = import ./module.nix {
-      package = self.packages."${linuxSystem}".default;
-      inherit linuxSystem;
+    darwinModules =
+    let
+      arguments = { inherit linuxSystem; };
+      packages = self.packages."${linuxSystem}";
+    in {
+      default = import ./module.nix (arguments // { package = packages.default; });
+      on-demand = import ./module.nix (arguments // { package = packages.on-demand; });
     };
   };
 }

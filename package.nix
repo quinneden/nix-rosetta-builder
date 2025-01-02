@@ -9,6 +9,7 @@
 
 # configuration
 , linuxSystem
+, onDemand # enable launchd socket activation
 }:
 nixos-generators.nixosGenerate (
 let
@@ -20,7 +21,6 @@ let
     sshUserPublicKeyFileName
 
     debug
-    onDemand
     ;
   imageFormat = "qcow-efi"; # must match `vmYaml.images.location`s extension
 
@@ -193,4 +193,4 @@ in {
   } ];
 
   system = linuxSystem;
-})
+}) // { inherit onDemand; }
