@@ -2,83 +2,83 @@
 { linuxSystem
 , package
 }:
-{ config, lib, pkgs, ... }:
-let
-  inherit (import ./constants.nix)
-    name
-    linuxHostName
-    linuxUser
-
-    sshKeyType
-    sshHostPrivateKeyFileName
-    sshHostPublicKeyFileName
-    sshUserPrivateKeyFileName
-    sshUserPublicKeyFileName
-
-    debug
-    ;
-  cfg = config.nix-rosetta-builder;
-  cores = 8;
-  daemonName = "${name}d";
-  daemonSocketName = "Listener";
-  inherit (package) onDemand;
-
-  # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
-  # in the 200-400 range `mkuser`s README.md mentions the same:
-  # https://github.com/freegeek-pdx/mkuser/blob/b7a7900d2e6ef01dfafad1ba085c94f7302677d9/README.md?plain=1#L413-L437
-  # Determinate's `nix-installer` (and, I believe, current versions of the official one) uses a
-  # variable number starting at 350 and up:
-  # https://github.com/DeterminateSystems/nix-installer/blob/6beefac4d23bd9a0b74b6758f148aa24d6df3ca9/README.md?plain=1#L511-L514
-  # Meanwhile, new macOS versions are installing accounts that encroach from below.
-  # Try to fit in between:
-  darwinGid = 349;
-  darwinUid = darwinGid;
-
-  darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
-  darwinUser = "_${darwinGroup}";
-  linuxSshdKeysDirName = "linux-sshd-keys";
-
-  # `nix.linux-builder` uses 31022:
-  # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/nix/linux-builder.nix#L199
-  # Use a similar, but different one:
-  port = 31122;
-
-  sshGlobalKnownHostsFileName = "ssh_known_hosts";
-  sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
-  sshHostKeyAlias = "${sshHost}-key";
-  workingDirPath = "/var/lib/${name}";
-
-  vmYaml = (pkgs.formats.yaml {}).generate "${name}.yaml" {
-    # Prevent ~200MiB unused nerdctl-full*.tar.gz download
-    # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/instance/start.go#L43
-    containerd.user = false;
-
-    cpus = cores;
-
-    images = [{
-      location = "${package}/nixos.qcow2"; # extension must match `imageFormat`
-    }];
-
-    memory = "6GiB";
-
-    mounts = [{
-      # order must match `sshdKeysVirtiofsTag`s suffix
-      location = "${workingDirPath}/${linuxSshdKeysDirName}";
-    }];
-
-    rosetta.enabled = true;
-    ssh = {
-      launchdSocketName = lib.optionalString onDemand daemonSocketName;
-      localPort = port;
-    };
-  };
-
-in {
+{ config, lib, pkgs, ... }: {
   options.nix-rosetta-builder = {
     enable = (lib.mkEnableOption "Nix Rosetta Linux builder") // { default = true; };
   };
 
-  config = lib.mkIf cfg.enable {
+  config =
+  let
+    inherit (import ./constants.nix)
+      name
+      linuxHostName
+      linuxUser
+
+      sshKeyType
+      sshHostPrivateKeyFileName
+      sshHostPublicKeyFileName
+      sshUserPrivateKeyFileName
+      sshUserPublicKeyFileName
+
+      debug
+      ;
+    cfg = config.nix-rosetta-builder;
+    cores = 8;
+    daemonName = "${name}d";
+    daemonSocketName = "Listener";
+    inherit (package) onDemand;
+
+    # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
+    # in the 200-400 range `mkuser`s README.md mentions the same:
+    # https://github.com/freegeek-pdx/mkuser/blob/b7a7900d2e6ef01dfafad1ba085c94f7302677d9/README.md?plain=1#L413-L437
+    # Determinate's `nix-installer` (and, I believe, current versions of the official one) uses a
+    # variable number starting at 350 and up:
+    # https://github.com/DeterminateSystems/nix-installer/blob/6beefac4d23bd9a0b74b6758f148aa24d6df3ca9/README.md?plain=1#L511-L514
+    # Meanwhile, new macOS versions are installing accounts that encroach from below.
+    # Try to fit in between:
+    darwinGid = 349;
+    darwinUid = darwinGid;
+
+    darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
+    darwinUser = "_${darwinGroup}";
+    linuxSshdKeysDirName = "linux-sshd-keys";
+
+    # `nix.linux-builder` uses 31022:
+    # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/nix/linux-builder.nix#L199
+    # Use a similar, but different one:
+    port = 31122;
+
+    sshGlobalKnownHostsFileName = "ssh_known_hosts";
+    sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
+    sshHostKeyAlias = "${sshHost}-key";
+    workingDirPath = "/var/lib/${name}";
+
+    vmYaml = (pkgs.formats.yaml {}).generate "${name}.yaml" {
+      # Prevent ~200MiB unused nerdctl-full*.tar.gz download
+      # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/instance/start.go#L43
+      containerd.user = false;
+
+      cpus = cores;
+
+      images = [{
+        location = "${package}/nixos.qcow2"; # extension must match `imageFormat`
+      }];
+
+      memory = "6GiB";
+
+      mounts = [{
+        # order must match `sshdKeysVirtiofsTag`s suffix
+        location = "${workingDirPath}/${linuxSshdKeysDirName}";
+      }];
+
+      rosetta.enabled = true;
+      ssh = {
+        launchdSocketName = lib.optionalString onDemand daemonSocketName;
+        localPort = port;
+      };
+    };
+
+  in lib.mkIf cfg.enable {
     environment.etc."ssh/ssh_config.d/100-${sshHost}.conf".text = ''
       Host "${sshHost}"
         GlobalKnownHostsFile "${workingDirPath}/${sshGlobalKnownHostsFileName}"
