@@ -144,6 +144,7 @@
         chmod 'g-w,o=' .
 
         # must be idempotent in the face of partial failues
+        cmp -s ${vmYamlSh} .lima/${vmNameSh}/lima.yaml && \
         limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} || {
           yes | ssh-keygen \
             -C ${darwinUserSh}@darwin -f ${sshUserPrivateKeyFileNameSh} -N "" -t ${sshKeyTypeSh}
@@ -156,6 +157,8 @@
 
           echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
           >${sshGlobalKnownHostsFileNameSh}
+
+          limactl delete --force ${vmNameSh}
 
           # must be last so `limactl list` only now succeeds
           limactl create --name=${vmNameSh} ${vmYamlSh}
