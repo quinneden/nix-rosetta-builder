@@ -32,13 +32,9 @@
       packages = [ pkgs.lima ];
     };
 
-    darwinModules =
-    let
-      arguments = { inherit linuxSystem; };
-      packages = self.packages."${linuxSystem}";
-    in {
-      default = import ./module.nix (arguments // { package = packages.default; });
-      on-demand = import ./module.nix (arguments // { package = packages.on-demand; });
+    darwinModules.default = import ./module.nix {
+      images = self.packages."${linuxSystem}";
+      inherit linuxSystem;
     };
   };
 }

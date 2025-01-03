@@ -193,4 +193,4 @@ in {
   } ];
 
   system = linuxSystem;
-}) // { inherit onDemand; }
+})

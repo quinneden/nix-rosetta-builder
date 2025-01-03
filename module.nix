@@ -1,10 +1,18 @@
 # configuration
-{ linuxSystem
-, package
+{ images
+, linuxSystem
 }:
 { config, lib, pkgs, ... }: {
   options.nix-rosetta-builder = {
     enable = (lib.mkEnableOption "Nix Rosetta Linux builder") // { default = true; };
+
+    onDemand = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        FIXME
+      '';
+    };
   };
 
   config =
@@ -26,7 +34,6 @@
     cores = 8;
     daemonName = "${name}d";
     daemonSocketName = "Listener";
-    inherit (package) onDemand;
 
     # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
     # in the 200-400 range `mkuser`s README.md mentions the same:
@@ -61,7 +68,8 @@
       cpus = cores;
 
       images = [{
-        location = "${package}/nixos.qcow2"; # extension must match `imageFormat`
+        # extension must match `imageFormat`
+        location = "${if cfg.onDemand then images.on-demand else images.default}/nixos.qcow2";
       }];
 
       memory = "6GiB";
@@ -73,7 +81,7 @@
 
       rosetta.enabled = true;
       ssh = {
-        launchdSocketName = lib.optionalString onDemand daemonSocketName;
+        launchdSocketName = lib.optionalString cfg.onDemand daemonSocketName;
         localPort = port;
       };
     };
@@ -157,9 +165,9 @@
       '';
 
       serviceConfig = {
-        KeepAlive = !onDemand;
+        KeepAlive = !cfg.onDemand;
 
-        Sockets."${daemonSocketName}" = lib.optionalAttrs onDemand {
+        Sockets."${daemonSocketName}" = lib.optionalAttrs cfg.onDemand {
           SockFamily = "IPv4";
           SockNodeName = "localhost";
           SockServiceName = toString port;
