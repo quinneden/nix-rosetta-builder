@@ -9,5 +9,5 @@ rec {
   sshUserPrivateKeyFileName = "ssh_user_${sshKeyType}_key";
   sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
 
-  debug = false; # enable root access in VM and debug logging
+  # debug = false; # enable root access in VM and debug logging
 }

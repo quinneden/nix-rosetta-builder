@@ -9,32 +9,40 @@
     };
   };
 
-  outputs = { self, nixos-generators, nixpkgs }:
-  let
+  outputs = {
+    self,
+    nixos-generators,
+    nixpkgs,
+  }: let
     darwinSystem = "aarch64-darwin";
-    linuxSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] darwinSystem;
-    lib = nixpkgs.lib;
-
+    linuxSystem = builtins.replaceStrings ["darwin"] ["linux"] darwinSystem;
   in {
-    packages."${linuxSystem}" =
-    let
-      arguments = { inherit linuxSystem nixos-generators nixpkgs; };
+    packages."${linuxSystem}" = let
       pkgs = nixpkgs.legacyPackages."${linuxSystem}";
-    in {
-      default = pkgs.callPackage ./package.nix (arguments // { onDemand = false; });
-      on-demand = pkgs.callPackage ./package.nix (arguments // { onDemand = true; });
+    in rec {
+      default = image;
+
+      image = pkgs.callPackage ./package.nix {
+        inherit linuxSystem nixos-generators nixpkgs;
+        # Optional: override default argument values passed to the derivation.
+        # These can also be accessed through the module.
+        #   debug = false;
+        #   onDemand = false;
+        #   enableRosetta = true;
+        #   extraConfig = { };
+      };
     };
 
-    devShells."${darwinSystem}".default =
-    let
+    devShells."${darwinSystem}".default = let
       pkgs = nixpkgs.legacyPackages."${darwinSystem}";
-    in pkgs.mkShell {
-      packages = [ pkgs.lima ];
-    };
+    in
+      pkgs.mkShell {
+        packages = [pkgs.lima];
+      };
 
     darwinModules.default = import ./module.nix {
-      images = self.packages."${linuxSystem}";
       inherit linuxSystem;
+      image = self.packages."${linuxSystem}".default;
     };
   };
 }
