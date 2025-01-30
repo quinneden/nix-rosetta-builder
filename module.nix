@@ -229,6 +229,11 @@ with lib; {
           umask 'g-w,o='
           chmod 'g-w,o=' .
 
+          if [[ $(cat ${vmYamlSh}) != $(cat .lima/${vmNameSh}/lima.yaml) ]] ; then
+            limactl stop -f ${vmNameSh}
+            limactl delete -f ${vmNameSh}
+          fi
+
           # must be idempotent in the face of partial failues
           limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} || {
             yes | ssh-keygen \
