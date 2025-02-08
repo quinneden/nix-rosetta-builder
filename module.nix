@@ -39,7 +39,7 @@ in {
       '';
     };
 
-    debug = mkOption {
+    debugInsecurely = mkOption {
       type = types.bool;
       default = false;
       description = ''
@@ -106,7 +106,7 @@ in {
       ;
 
     imageWithFinalConfig = image.override {
-      debugInsecurely = cfg.debug;
+      debugInsecurely = cfg.debugInsecurely;
       onDemand = cfg.onDemand;
     };
 
@@ -243,7 +243,7 @@ in {
             limactl create --name=${vmNameSh} ${vmYamlSh}
           }
 
-          exec limactl start ${optionalString cfg.debug "--debug"} --foreground ${vmNameSh}
+          exec limactl start ${optionalString cfg.debugInsecurely "--debug"} --foreground ${vmNameSh}
         '';
 
         serviceConfig =
@@ -259,7 +259,7 @@ in {
             UserName = darwinUser;
             WorkingDirectory = workingDirPath;
           }
-          // optionalAttrs cfg.debug {
+          // optionalAttrs cfg.debugInsecurely {
             StandardErrorPath = "/tmp/${daemonName}.err.log";
             StandardOutPath = "/tmp/${daemonName}.out.log";
           };
