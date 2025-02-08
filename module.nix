@@ -50,7 +50,7 @@ in {
       type = types.int;
       default = 8;
       description = ''
-        The number of CPU cores allocated to the Lima instance.
+        The number of CPU cores allocated to the VM.
         This also sets the maximum number of jobs allowed for the
         builder in the `nix.buildMachines` specification.
       '';
@@ -68,7 +68,7 @@ in {
       type = types.str;
       default = "100GiB";
       description = ''
-        The size of the disk image for the Lima instance.
+        The size of the disk image for the VM.
       '';
     };
 
@@ -94,7 +94,13 @@ in {
       type = types.bool;
       default = false;
       description = ''
-        FIXME
+        By default, the VM will run all the time as a daemon in the background.  This allows Linux
+        builds to start right away, but means the VM is always consuming RAM (and a bit of CPU).
+
+        Alternatively, this option will cause the VM to run only "on-demand": when not in use the VM
+        will not be running.  Any Linux build will cause it to automatically start up
+        (blocking/pausing the build for several seconds until the VM boots) and after a period of
+        time/hours without any active Linux builds, the VM will power itself off.
       '';
     };
 
