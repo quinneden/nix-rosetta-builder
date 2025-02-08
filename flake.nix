@@ -42,7 +42,7 @@
 
     darwinModules.default = import ./module.nix {
       inherit linuxSystem;
-      image = self.packages."${linuxSystem}".default;
+      image = self.packages."${linuxSystem}".image;
     };
   };
 }
