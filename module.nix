@@ -106,7 +106,12 @@ in {
 
     port = mkOption {
       type = types.int;
+
+      # `nix.linux-builder` uses 31022:
+      # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/nix/linux-builder.nix#L199
+      # Use a similar, but different one:
       default = 31122;
+
       description = ''
         The SSH port used by the VM.
       '';
@@ -151,10 +156,6 @@ in {
     darwinGroup = builtins.replaceStrings ["-"] [""] name; # keep in sync with `name`s format
     darwinUser = "_${darwinGroup}";
     linuxSshdKeysDirName = "linux-sshd-keys";
-
-    # `nix.linux-builder` uses 31022:
-    # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/nix/linux-builder.nix#L199
-    # Use a similar, but different one:
 
     sshGlobalKnownHostsFileName = "ssh_known_hosts";
     sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
