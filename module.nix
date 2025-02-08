@@ -72,15 +72,6 @@ in {
       '';
     };
 
-    enableRosetta = mkOption {
-      type = types.bool;
-      default = true;
-      description = ''
-        Enable Rosetta 2 in the VM, allowing cross
-        compilation of `x86_64-linux` packages.
-      '';
-    };
-
     memory = mkOption {
       type = types.str;
       default = "6GiB";
@@ -135,7 +126,6 @@ in {
       debugInsecurely = cfg.debug;
       extraConfig = cfg.config or {};
       onDemand = cfg.onDemand;
-      withRosetta = cfg.enableRosetta;
     };
 
     cfg = config.nix-rosetta-builder;
@@ -187,7 +177,7 @@ in {
         }
       ];
 
-      rosetta.enabled = cfg.enableRosetta;
+      rosetta.enabled = true;
 
       ssh = {
         launchdSocketName = optionalString cfg.onDemand daemonSocketName;
@@ -306,7 +296,7 @@ in {
             ];
             systems = [
               linuxSystem
-              (optionalString cfg.enableRosetta "x86_64-linux")
+              "x86_64-linux"
             ];
           }
         ];
