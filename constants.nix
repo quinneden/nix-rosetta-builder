@@ -8,4 +8,6 @@ rec {
   sshHostPublicKeyFileName = "${sshHostPrivateKeyFileName}.pub";
   sshUserPrivateKeyFileName = "ssh_user_${sshKeyType}_key";
   sshUserPublicKeyFileName = "${sshUserPrivateKeyFileName}.pub";
+
+  debugInsecurely = false; # enable root access in VM and debug logging
 }

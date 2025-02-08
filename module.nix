@@ -39,14 +39,6 @@ in {
       '';
     };
 
-    debugInsecurely = mkOption {
-      type = types.bool;
-      default = false;
-      description = ''
-        Enable root access in VM and debug logging.
-      '';
-    };
-
     diskSize = mkOption {
       type = types.str;
       default = "100GiB";
@@ -95,6 +87,7 @@ in {
   config = let
     inherit
       (import ./constants.nix)
+      debugInsecurely
       name
       linuxHostName
       linuxUser
@@ -106,7 +99,7 @@ in {
       ;
 
     imageWithFinalConfig = image.override {
-      debugInsecurely = cfg.debugInsecurely;
+      inherit debugInsecurely;
       onDemand = cfg.onDemand;
     };
 
@@ -243,7 +236,7 @@ in {
             limactl create --name=${vmNameSh} ${vmYamlSh}
           }
 
-          exec limactl start ${optionalString cfg.debugInsecurely "--debug"} --foreground ${vmNameSh}
+          exec limactl start ${optionalString debugInsecurely "--debug"} --foreground ${vmNameSh}
         '';
 
         serviceConfig =
@@ -259,7 +252,7 @@ in {
             UserName = darwinUser;
             WorkingDirectory = workingDirPath;
           }
-          // optionalAttrs cfg.debugInsecurely {
+          // optionalAttrs debugInsecurely {
             StandardErrorPath = "/tmp/${daemonName}.err.log";
             StandardOutPath = "/tmp/${daemonName}.out.log";
           };
