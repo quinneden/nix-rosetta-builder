@@ -25,11 +25,7 @@
       image = pkgs.callPackage ./package.nix {
         inherit linuxSystem nixos-generators nixpkgs;
         # Optional: override default argument values passed to the derivation.
-        # These can also be accessed through the module.
-        #   debug = false;
-        #   onDemand = false;
-        #   enableRosetta = true;
-        #   extraConfig = { };
+        # Many can also be accessed through the module.
       };
     };
 

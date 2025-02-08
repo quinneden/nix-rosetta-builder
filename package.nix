@@ -8,7 +8,7 @@
   umount,
   # configuration
   linuxSystem,
-  debug ? false,
+  debugInsecurely ? false,
   extraConfig ? {},
   onDemand ? false, # enable launchd socket activation
   withRosetta ? true,
@@ -81,13 +81,13 @@
 
             security = {
               sudo = {
-                enable = debug;
-                wheelNeedsPassword = !debug;
+                enable = debugInsecurely;
+                wheelNeedsPassword = !debugInsecurely;
               };
             };
 
             services = {
-              getty = optionalAttrs debug {autologinUser = linuxUser;};
+              getty = optionalAttrs debugInsecurely {autologinUser = linuxUser;};
 
               logind = optionalAttrs onDemand {
                 extraConfig = ''
@@ -193,7 +193,7 @@
 
               users."${linuxUser}" = {
                 isNormalUser = true;
-                extraGroups = optionals debug ["wheel"];
+                extraGroups = optionals debugInsecurely ["wheel"];
               };
             };
 

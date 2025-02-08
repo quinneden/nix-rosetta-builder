@@ -127,7 +127,7 @@ in {
       ;
 
     imageWithFinalConfig = image.override {
-      debug = cfg.debug;
+      debugInsecurely = cfg.debug;
       extraConfig = cfg.config or {};
       onDemand = cfg.onDemand;
       withRosetta = cfg.enableRosetta;
