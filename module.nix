@@ -243,12 +243,8 @@ in {
           umask 'g-w,o='
           chmod 'g-w,o=' .
 
-          if [[ $(cat ${vmYamlSh}) != $(cat .lima/${vmNameSh}/lima.yaml) ]] ; then
-            limactl stop -f ${vmNameSh}
-            limactl delete -f ${vmNameSh}
-          fi
-
           # must be idempotent in the face of partial failues
+          cmp -s ${vmYamlSh} .lima/${vmNameSh}/lima.yaml && \
           limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} || {
             yes | ssh-keygen \
               -C ${darwinUserSh}@darwin -f ${sshUserPrivateKeyFileNameSh} -N "" -t ${sshKeyTypeSh}
@@ -261,6 +257,8 @@ in {
 
             echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
             >${sshGlobalKnownHostsFileNameSh}
+
+            limactl delete --force ${vmNameSh}
 
             # must be last so `limactl list` only now succeeds
             limactl create --name=${vmNameSh} ${vmYamlSh}
