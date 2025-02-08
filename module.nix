@@ -1,5 +1,5 @@
-# configuration
 {
+  # configuration
   image,
   linuxSystem,
 }: {
@@ -87,7 +87,6 @@ in {
   config = let
     inherit
       (import ./constants.nix)
-      debugInsecurely
       name
       linuxHostName
       linuxUser
@@ -97,6 +96,8 @@ in {
       sshUserPrivateKeyFileName
       sshUserPublicKeyFileName
       ;
+
+    debugInsecurely = false; # enable root access in VM and debug logging
 
     imageWithFinalConfig = image.override {
       inherit debugInsecurely;

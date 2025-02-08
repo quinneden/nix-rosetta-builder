@@ -8,7 +8,7 @@
   umount,
   # configuration
   linuxSystem,
-  debugInsecurely ? false,
+  debugInsecurely ? false, # enable auto-login and passwordless sudo to root
   extraConfig ? {},
   onDemand ? false, # enable launchd socket activation
   withRosetta ? true,
