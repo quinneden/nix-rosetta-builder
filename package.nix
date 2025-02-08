@@ -13,9 +13,14 @@
   onDemand ? false, # enable launchd socket activation
   withRosetta ? true,
 }:
-with lib;
   nixos-generators.nixosGenerate (
     let
+      inherit
+        (lib)
+        escapeShellArg
+        optionalAttrs
+        optionals
+        ;
       inherit
         (import ./constants.nix)
         linuxHostName

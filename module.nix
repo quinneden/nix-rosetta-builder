@@ -7,8 +7,22 @@
   lib,
   pkgs,
   ...
-}:
-with lib; {
+}: let
+  inherit
+    (lib)
+    escapeShellArg
+    literalExpression
+    mkAfter
+    mkDefault
+    mkEnableOption
+    mkForce
+    mkIf
+    mkOption
+    optionalAttrs
+    optionalString
+    types
+    ;
+in {
   options.nix-rosetta-builder = {
     enable =
       (mkEnableOption "Nix Rosetta Linux builder")
