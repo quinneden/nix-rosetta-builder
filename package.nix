@@ -1,5 +1,5 @@
-# dependencies
 {
+  # dependencies
   nixos-generators,
   nixpkgs,
   # pkgs
