@@ -11,7 +11,6 @@
   inherit
     (lib)
     escapeShellArg
-    literalExpression
     mkAfter
     mkDefault
     mkEnableOption
@@ -29,22 +28,6 @@ in {
       // {
         default = true;
       };
-
-    config = mkOption {
-      type = types.deferredModule;
-      default = {};
-      description = ''
-        Extra NixOS configuration options for the VM. This is merged with
-        the default configuration. Default values will be overridden if
-        specified here. Changes will cause a rebuild of the VM image.
-      '';
-      example = literalExpression ''
-        ({ pkgs, ... }:
-        {
-          environment.systemPackages = [ pkgs.neovim ];
-        })
-      '';
-    };
 
     cores = mkOption {
       type = types.int;
@@ -124,7 +107,6 @@ in {
 
     imageWithFinalConfig = image.override {
       debugInsecurely = cfg.debug;
-      extraConfig = cfg.config or {};
       onDemand = cfg.onDemand;
     };
 
