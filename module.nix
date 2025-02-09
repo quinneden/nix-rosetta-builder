@@ -29,6 +29,22 @@ in
       default = true;
     };
 
+    config = mkOption {
+      type = types.deferredModule;
+      default = { };
+      description = ''
+        Extra NixOS configuration options for the VM. This is merged with
+        the default configuration. Default values will be overridden if
+        specified here. Changes will cause a rebuild of the VM image.
+      '';
+      example = lib.literalExpression ''
+        ({ pkgs, ... }:
+        {
+          environment.systemPackages = [ pkgs.neovim ];
+        })
+      '';
+    };
+
     cores = mkOption {
       type = types.int;
       default = 8;
@@ -44,6 +60,15 @@ in
       default = "100GiB";
       description = ''
         The size of the disk image for the VM.
+      '';
+    };
+
+    enableRosetta = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Enable Rosetta 2 in the VM, allowing cross
+        compilation of `x86_64-linux` packages.
       '';
     };
 
