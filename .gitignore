@@ -1,1 +1,5 @@
-/result
+result
+image
+.direnv
+.DS_Store
+.envrc
