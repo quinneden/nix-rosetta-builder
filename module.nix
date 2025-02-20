@@ -269,6 +269,7 @@ in {
               "benchmark"
               "big-parallel"
               "kvm"
+              "nixos-test"
             ];
             systems = [
               linuxSystem
