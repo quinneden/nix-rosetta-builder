@@ -47,6 +47,31 @@ in
       '';
     };
 
+    allowExtraConfig = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Allow additional unrestricted configuration of the VM. This
+        could potentially expose vulnerabilities in the VM.
+      '';
+    };
+
+    extraConfig = mkOption {
+      type = with types; nullOr deferredModule;
+      default = null;
+      description = ''
+        Extra NixOS configuration options for the VM. This is merged with
+        the default configuration. Default values will be overridden if
+        specified here. Changes will cause a rebuild of the VM image.
+      '';
+      example = lib.literalExpression ''
+        ({ pkgs, ... }:
+        {
+          nix.settings.substituters = [ ... ];
+        })
+      '';
+    };
+
     memory = mkOption {
       type = types.str;
       default = "6GiB";
@@ -82,6 +107,14 @@ in
         The SSH port used by the VM.
       '';
     };
+
+    withRosetta = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Whether to enable Rosetta 2 in the VM.
+      '';
+    };
   };
 
   config =
@@ -97,17 +130,10 @@ in
         sshUserPublicKeyFileName
         ;
 
-      debugInsecurely = false; # enable root access in VM and debug logging
-
-      imageWithFinalConfig = image.override {
-        inherit debugInsecurely;
-        onDemand = cfg.onDemand;
-      };
-
       cfg = config.nix-rosetta-builder;
       daemonName = "${name}d";
       daemonSocketName = "Listener";
-
+      debugInsecurely = false; # enable root access in VM and debug logging
       # `sysadminctl -h` says role account UIDs (no mention of service accounts or GIDs) should be
       # in the 200-400 range `mkuser`s README.md mentions the same:
       # https://github.com/freegeek-pdx/mkuser/blob/b7a7900d2e6ef01dfafad1ba085c94f7302677d9/README.md?plain=1#L413-L437
@@ -118,15 +144,23 @@ in
       # Try to fit in between:
       darwinGid = 349;
       darwinUid = darwinGid;
-
       darwinGroup = builtins.replaceStrings [ "-" ] [ "" ] name; # keep in sync with `name`s format
       darwinUser = "_${darwinGroup}";
-      linuxSshdKeysDirName = "linux-sshd-keys";
 
+      imageWithFinalConfig = image.override {
+        inherit debugInsecurely;
+        inherit (cfg)
+          allowExtraConfig
+          extraConfig
+          onDemand
+          withRosetta
+          ;
+      };
+
+      linuxSshdKeysDirName = "linux-sshd-keys";
       sshGlobalKnownHostsFileName = "ssh_known_hosts";
       sshHost = name; # no prefix because it's user visible (in `sudo ssh '${sshHost}'`)
       sshHostKeyAlias = "${sshHost}-key";
-      workingDirPath = "/var/lib/${name}";
 
       vmYaml = (pkgs.formats.yaml { }).generate "${name}.yaml" {
         # Prevent ~200MiB unused nerdctl-full*.tar.gz download
@@ -153,15 +187,24 @@ in
           }
         ];
 
-        rosetta.enabled = true;
+        rosetta.enabled = cfg.withRosetta;
 
         ssh = {
           launchdSocketName = optionalString cfg.onDemand daemonSocketName;
           localPort = cfg.port;
         };
       };
+
+      workingDirPath = "/var/lib/${name}";
     in
     mkIf cfg.enable {
+      assertions = [
+        {
+          assertion = (cfg.extraConfig != { }) -> cfg.allowExtraConfig;
+          message = "nix-rosetta-builder.extraConfig requires that nix-rosetta-builder.allowExtraConfig be true.";
+        }
+      ];
+
       environment.etc."ssh/ssh_config.d/100-${sshHost}.conf".text = ''
         Host "${sshHost}"
           GlobalKnownHostsFile "${workingDirPath}/${sshGlobalKnownHostsFileName}"
