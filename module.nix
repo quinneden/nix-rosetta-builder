@@ -70,6 +70,17 @@ in
       '';
     };
 
+    onDemandLingerTime = mkOption {
+      type = types.str;
+      default = "3h";
+      description = ''
+        If onDemand=true, this specifies the number of seconds of inactivity before the VM will
+        power itself off.
+
+        Accepts Systemd time format. Must be in the format described in {manpage}`systemd.time(7)`.
+      '';
+    };
+
     port = mkOption {
       type = types.int;
 
@@ -102,6 +113,7 @@ in
       imageWithFinalConfig = image.override {
         inherit debugInsecurely;
         onDemand = cfg.onDemand;
+        onDemandLingerTime = cfg.onDemandLingerTime;
       };
 
       cfg = config.nix-rosetta-builder;
