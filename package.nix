@@ -11,16 +11,12 @@
   debugInsecurely ? false, # enable auto-login and passwordless sudo to root
   extraConfig ? { },
   onDemand ? false, # enable launchd socket activation
-  onDemandLingerTime ? "3h", # poweroff after 3 hours of inactivity
+  onDemandLingerMinutes ? 180, # poweroff after 3 hours of inactivity
   withRosetta ? true,
 }:
 nixos-generators.nixosGenerate (
   let
-    inherit (lib)
-      escapeShellArg
-      optionalAttrs
-      optionals
-      ;
+    inherit (lib) escapeShellArg optionalAttrs optionals;
     inherit (import ./constants.nix)
       linuxHostName
       linuxUser
@@ -91,7 +87,7 @@ nixos-generators.nixosGenerate (
           logind = optionalAttrs onDemand {
             extraConfig = ''
               IdleAction=poweroff
-              IdleActionSec=${onDemandLingerTime}
+              IdleActionSec=${toString onDemandLingerMinutes}minutes
             '';
           };
 
