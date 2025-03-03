@@ -16,6 +16,7 @@ Advantages over nix-darwin's built in
 
 * x86_64-linux support enabled by default and much faster (using Rosetta 2)
 * Multi-core by default
+* Optionally runs VM on-demand, powering off when idle (see: `nix-rosetta-builder.onDemand` option)
 * More secure:
   * VM runs with minimum permissions (runs as a non-root/admin/wheel user/service account)
   * VM doesn't accept remote connections (it binds to the loopback interface (127.0.0.1))
@@ -50,6 +51,10 @@ flake.nix:
         # Then: uncomment `nix-rosetta-builder`, remove `linux-builder`, and `darwin-rebuild switch`
         # a second time. Subsequently, `nix-rosetta-builder` can rebuild itself.
         nix-rosetta-builder.darwinModules.default
+        {
+          # see available options in module.nix's `options.nix-rosetta-builder`
+          nix-rosetta-builder.onDemand = true;
+        }
       ];
     };
   };
