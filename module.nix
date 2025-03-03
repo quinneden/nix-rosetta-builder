@@ -12,6 +12,7 @@
 let
   inherit (lib)
     escapeShellArg
+    literalExpression
     mkAfter
     mkDefault
     mkEnableOption
@@ -47,6 +48,22 @@ in
       '';
     };
 
+    extraConfig = mkOption {
+      type = types.deferredModule;
+      default = { };
+      description = ''
+        Extra NixOS configuration options for the VM. This is merged with
+        the default configuration. Default values will be overridden if
+        specified here. Changes will cause a rebuild of the VM image.
+      '';
+      example = literalExpression ''
+        ({ pkgs, ... }:
+        {
+          environment.systemPackages = [ pkgs.neovim ];
+        })
+      '';
+    };
+
     memory = mkOption {
       type = types.str;
       default = "6GiB";
@@ -54,6 +71,28 @@ in
         The amount of memory to allocate to the VM.
       '';
       example = "8GiB";
+    };
+
+    mounts = mkOption {
+      type = with types; (listOf attrs);
+      # type = with types;
+      # listOf (
+      #   attrsOf (submodule {
+      #     options = rec {
+      #       location = mkOption { type = str; };
+      #       mountPoint = mkOption {
+      #         type = str;
+      #         default = location;
+      #       };
+      #     };
+      #   })
+      # );
+      default = [ ];
+      description = ''
+        Extra locations on the host to mount as volumes in the VM. This is
+        passed to Lima's `mounts` field in the VM configuration and uses the
+        same syntax.
+      '';
     };
 
     onDemand = mkOption {
@@ -91,6 +130,15 @@ in
         The SSH port used by the VM.
       '';
     };
+
+    withRosetta = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Enable Rosetta 2 in the VM, allowing cross
+        compilation of `x86_64-linux` packages.
+      '';
+    };
   };
 
   config =
@@ -106,12 +154,14 @@ in
         sshUserPublicKeyFileName
         ;
 
-      debugInsecurely = false; # enable root access in VM and debug logging
+      debugInsecurely = true; # enable root access in VM and debug logging
 
       imageWithFinalConfig = image.override {
         inherit debugInsecurely;
+        extraConfig = cfg.extraConfig;
         onDemand = cfg.onDemand;
         onDemandLingerMinutes = cfg.onDemandLingerMinutes;
+        withRosetta = cfg.withRosetta;
       };
 
       cfg = config.nix-rosetta-builder;
@@ -161,9 +211,9 @@ in
             # order must match `sshdKeysVirtiofsTag`s suffix
             location = "${workingDirPath}/${linuxSshdKeysDirName}";
           }
-        ];
+        ] ++ cfg.mounts;
 
-        rosetta.enabled = true;
+        rosetta.enabled = cfg.withRosetta;
 
         ssh = {
           launchdSocketName = optionalString cfg.onDemand daemonSocketName;
