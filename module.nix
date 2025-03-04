@@ -264,13 +264,15 @@ in
 
               echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
               >${sshGlobalKnownHostsFileNameSh}
-              chmod 'go+r' ${sshGlobalKnownHostsFileNameSh}
 
               limactl delete --force ${vmNameSh}
 
               # must be last so `limactl list` only now succeeds
               limactl create --name=${vmNameSh} ${vmYamlSh}
             }
+
+            # outside the block so both new and old installations end up with the same permissions
+            chmod 'go+r' ${sshGlobalKnownHostsFileNameSh}
 
             # outside the block so non-root access may be enabled without recreating VM
             ${optionalString cfg.permitNonRootSshAccess "chmod 'go+r' ${sshUserPrivateKeyFileNameSh}"}
