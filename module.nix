@@ -11,6 +11,7 @@
 }:
 let
   inherit (lib)
+    boolToString
     escapeShellArg
     mkAfter
     mkDefault
@@ -76,6 +77,18 @@ in
       description = ''
         If onDemand=true, this specifies the number of minutes of inactivity before the VM will
         power itself off.
+      '';
+    };
+
+    permitNonRootSshAccess = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Allow regular, non-root users to SSH into the VM with `ssh rosetta-builder`.
+
+        By default, regular users can `nix build` using the VM without any extra permissions (since
+        it's configured as a remote builder), but they can only SSH directly into it with
+        `sudo ssh rosetta-builder`.
       '';
     };
 
@@ -186,6 +199,8 @@ in
       launchd.daemons."${daemonName}" = {
         path = [
           pkgs.coreutils
+          pkgs.diffutils
+          pkgs.findutils
           pkgs.gnugrep
           (pkgs.lima.overrideAttrs (old: {
             src = pkgs.fetchFromGitHub {
@@ -226,14 +241,21 @@ in
             set -u
 
             umask 'g-w,o='
-            chmod 'g-w,o=' .
+            chmod 'g-w,o=x' .
 
             # must be idempotent in the face of partial failues
+            # the `find` test must fail if the user private key was readable but should no longer be
             cmp -s ${vmYamlSh} .lima/${vmNameSh}/lima.yaml && \
-            limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} || {
-              yes | ssh-keygen \
+            limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} && \
+            find ${sshUserPrivateKeyFileNameSh} \
+              -perm '-go=r' -exec ${boolToString cfg.permitNonRootSshAccess} '{}' '+' 2>'/dev/null' && \
+            true || {
+              rm -f ${sshUserPrivateKeyFileNameSh} ${sshUserPublicKeyFileNameSh}
+              ssh-keygen \
                 -C ${darwinUserSh}@darwin -f ${sshUserPrivateKeyFileNameSh} -N "" -t ${sshKeyTypeSh}
-              yes | ssh-keygen \
+
+              rm -f ${sshHostPrivateKeyFileNameSh} ${sshHostPublicKeyFileNameSh}
+              ssh-keygen \
                 -C root@${linuxHostNameSh} -f ${sshHostPrivateKeyFileNameSh} -N "" -t ${sshKeyTypeSh}
 
               mkdir -p ${linuxSshdKeysDirNameSh}
@@ -242,12 +264,16 @@ in
 
               echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
               >${sshGlobalKnownHostsFileNameSh}
+              chmod 'go+r' ${sshGlobalKnownHostsFileNameSh}
 
               limactl delete --force ${vmNameSh}
 
               # must be last so `limactl list` only now succeeds
               limactl create --name=${vmNameSh} ${vmYamlSh}
             }
+
+            # outside the block so non-root access may be enabled without recreating VM
+            ${optionalString cfg.permitNonRootSshAccess "chmod 'go+r' ${sshUserPrivateKeyFileNameSh}"}
 
             exec limactl start ${optionalString debugInsecurely "--debug"} --foreground ${vmNameSh}
           '';
