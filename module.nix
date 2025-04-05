@@ -191,9 +191,13 @@ in
           let
             workingDirPathSh = escapeShellArg workingDirPath;
 
+            userPathSh = escapeShellArg "/Users/${darwinUser}";
+            groupPathSh = escapeShellArg "/Groups/${darwinGroup}";
           in
           mkAfter ''
             sudo rm -rf ${workingDirPathSh}
+            sudo dscl . -delete ${userPathSh}
+            sudo dscl . -delete ${groupPathSh}
           '';
       })
       (mkIf cfg.enable {
