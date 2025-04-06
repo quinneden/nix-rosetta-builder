@@ -63,14 +63,9 @@ flake.nix:
 
 ## Uninstall
 
-Remove `nix-rosetta-builder` from nix-darwin's flake.nix, `darwin-rebuild switch`, and then:
-```sh
-sudo rm -r /var/lib/rosetta-builder
-sudo dscl . -delete /Users/_rosettabuilder
-sudo dscl . -delete /Groups/rosettabuilder
-```
+1. Set `nix-rosetta-builder.enable = false`in your config, and `darwin-rebuild switch` to it
+1. Remove `nix-rosetta-builder` from nix-darwin's flake.nix and `darwin-rebuild switch` to it
 
 ## Contributing
 
 Feature requests, bug reports, and pull requests are all welcome.
-
