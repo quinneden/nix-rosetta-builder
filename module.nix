@@ -30,10 +30,17 @@ in
       default = true;
     };
 
-    extraConfig = mkOption {
+    potentiallyInsecureExtraConfig = mkOption {
       type = types.attrs;
       default = { };
-      description = "	Extra config to pass to the generated VM\n";
+      description = ''
+        Extra configuration to pass to the VM.
+        The VM's default configuration allows it to be securely used as a builder.  Some extra
+        configuration changes may endager this security and allow compromised deriviations into the
+        host's Nix store.  Care should be taken to think through the implications of any extra
+        configuration changes using this option.  When in doubt, please open a GitHub issue to
+        discuss (additional, restricted options can be added to support safe configurations).
+      '';
     };
 
     cores = mkOption {
@@ -131,7 +138,7 @@ in
         inherit debugInsecurely;
         onDemand = cfg.onDemand;
         onDemandLingerMinutes = cfg.onDemandLingerMinutes;
-        extraConfig = cfg.extraConfig;
+        extraConfig = cfg.potentiallyInsecureExtraConfig;
       };
 
       cfg = config.nix-rosetta-builder;
