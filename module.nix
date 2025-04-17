@@ -167,6 +167,16 @@ in
       sshHostKeyAlias = "${sshHost}-key";
       workingDirPath = "/var/lib/${name}";
 
+      gidSh = escapeShellArg (toString darwinGid);
+      groupSh = escapeShellArg darwinGroup;
+      groupPathSh = escapeShellArg "/Groups/${darwinGroup}";
+
+      uidSh = escapeShellArg (toString darwinUid);
+      userSh = escapeShellArg darwinUser;
+      userPathSh = escapeShellArg "/Users/${darwinUser}";
+
+      workingDirPathSh = escapeShellArg workingDirPath;
+
       vmYaml = (pkgs.formats.yaml { }).generate "${name}.yaml" {
         # Prevent ~200MiB unused nerdctl-full*.tar.gz download
         # https://github.com/lima-vm/lima/blob/0e931107cadbcb6dbc7bbb25626f66cdbca1f040/pkg/instance/start.go#L43
@@ -203,11 +213,6 @@ in
     mkMerge [
       (mkIf (!cfg.enable) {
         system.activationScripts.extraActivation.text =
-          let
-            workingDirPathSh = escapeShellArg workingDirPath;
-            userPathSh = escapeShellArg "/Users/${darwinUser}";
-            groupPathSh = escapeShellArg "/Groups/${darwinGroup}";
-          in
           # apply "before" to work cooperatively with any other modules using this activation script
           mkBefore ''
             rm -rf ${workingDirPathSh}
@@ -366,17 +371,6 @@ in
         # `activationScripts.launchd` which needs the group, user, and directory in place:
         # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L58-L66
         system.activationScripts.extraActivation.text =
-          let
-            gidSh = escapeShellArg (toString darwinGid);
-            groupSh = escapeShellArg darwinGroup;
-            groupPathSh = escapeShellArg "/Groups/${darwinGroup}";
-
-            uidSh = escapeShellArg (toString darwinUid);
-            userSh = escapeShellArg darwinUser;
-            userPathSh = escapeShellArg "/Users/${darwinUser}";
-
-            workingDirPathSh = escapeShellArg workingDirPath;
-          in
           # apply "after" to work cooperatively with any other modules using this activation script
           mkAfter ''
             printf >&2 'setting up group %s...\n' ${groupSh}
