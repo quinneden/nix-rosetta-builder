@@ -262,7 +262,8 @@ in
             cmp -s ${vmYamlSh} .lima/${vmNameSh}/lima.yaml && \
             limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} && \
             find ${sshUserPrivateKeyFileNameSh} \
-              -perm '-go=r' -exec ${boolToString cfg.permitNonRootSshAccess} '{}' '+' 2>'/dev/null' && \
+              -perm '-go=r' -exec ${boolToString cfg.permitNonRootSshAccess} '{}' '+' \
+            2>'/dev/null' && \
             true || {
               rm -f ${sshUserPrivateKeyFileNameSh} ${sshUserPublicKeyFileNameSh}
               ssh-keygen \
@@ -274,7 +275,8 @@ in
 
               mkdir -p ${linuxSshdKeysDirNameSh}
               mv \
-                ${sshUserPublicKeyFileNameSh} ${sshHostPrivateKeyFileNameSh} ${linuxSshdKeysDirNameSh}
+                ${sshUserPublicKeyFileNameSh} ${sshHostPrivateKeyFileNameSh} \
+                ${linuxSshdKeysDirNameSh}
 
               echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
               >${sshGlobalKnownHostsFileNameSh}
@@ -289,7 +291,9 @@ in
             chmod 'go+r' ${sshGlobalKnownHostsFileNameSh}
 
             # outside the block so non-root access may be enabled without recreating VM
-            ${optionalString cfg.permitNonRootSshAccess "chmod 'go+r' ${sshUserPrivateKeyFileNameSh}"}
+            ${optionalString cfg.permitNonRootSshAccess ''
+              chmod 'go+r' ${sshUserPrivateKeyFileNameSh}
+            ''}
 
             exec limactl start ${optionalString debugInsecurely "--debug"} --foreground ${vmNameSh}
           '';
