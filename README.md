@@ -63,8 +63,9 @@ flake.nix:
 
 ## Uninstall
 
-1. Set `nix-rosetta-builder.enable = false`in your config, and `darwin-rebuild switch` to it
-1. Remove `nix-rosetta-builder` from nix-darwin's flake.nix and `darwin-rebuild switch` to it
+1. Set `nix-rosetta-builder.enable = false` in the nix-darwin configuration and run
+   `darwin-rebuild switch` to clean up resources (including VM, user, group, storage, etc)
+2. Optionally remove `nix-rosetta-builder` from the nix-darwin configuration
 
 ## Contributing
 
