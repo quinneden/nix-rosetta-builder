@@ -14,6 +14,7 @@ let
     boolToString
     escapeShellArg
     mkAfter
+    mkBefore
     mkDefault
     mkEnableOption
     mkForce
@@ -190,14 +191,14 @@ in
         system.activationScripts.extraActivation.text =
           let
             workingDirPathSh = escapeShellArg workingDirPath;
-
             userPathSh = escapeShellArg "/Users/${darwinUser}";
             groupPathSh = escapeShellArg "/Groups/${darwinGroup}";
           in
-          mkAfter ''
-            sudo rm -rf ${workingDirPathSh}
-            sudo dscl . -delete ${userPathSh}
-            sudo dscl . -delete ${groupPathSh}
+          # apply "before" to work cooperatively with any other modules using this activation script
+          mkBefore ''
+            rm -rf ${workingDirPathSh}
+            dscl . -delete ${userPathSh}
+            dscl . -delete ${groupPathSh}
           '';
       })
       (mkIf cfg.enable {
