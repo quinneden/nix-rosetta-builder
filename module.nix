@@ -32,6 +32,19 @@ in
       default = true;
     };
 
+    potentiallyInsecureExtraConfig = mkOption {
+      type = types.attrs;
+      default = { };
+      description = ''
+        Extra configuration to pass to the VM.
+        The VM's default configuration allows it to be securely used as a builder.  Some extra
+        configuration changes may endager this security and allow compromised deriviations into the
+        host's Nix store.  Care should be taken to think through the implications of any extra
+        configuration changes using this option.  When in doubt, please open a GitHub issue to
+        discuss (additional, restricted options can be added to support safe configurations).
+      '';
+    };
+
     cores = mkOption {
       type = types.int;
       default = 8;
@@ -127,6 +140,7 @@ in
         inherit debugInsecurely;
         onDemand = cfg.onDemand;
         onDemandLingerMinutes = cfg.onDemandLingerMinutes;
+        extraConfig = cfg.potentiallyInsecureExtraConfig;
       };
 
       cfg = config.nix-rosetta-builder;
@@ -265,7 +279,8 @@ in
               cmp -s ${vmYamlSh} .lima/${vmNameSh}/lima.yaml && \
               limactl list -q 2>'/dev/null' | grep -q ${vmNameSh} && \
               find ${sshUserPrivateKeyFileNameSh} \
-                -perm '-go=r' -exec ${boolToString cfg.permitNonRootSshAccess} '{}' '+' 2>'/dev/null' && \
+                -perm '-go=r' -exec ${boolToString cfg.permitNonRootSshAccess} '{}' '+' \
+              2>'/dev/null' && \
               true || {
                 rm -f ${sshUserPrivateKeyFileNameSh} ${sshUserPublicKeyFileNameSh}
                 ssh-keygen \
@@ -277,7 +292,8 @@ in
 
                 mkdir -p ${linuxSshdKeysDirNameSh}
                 mv \
-                  ${sshUserPublicKeyFileNameSh} ${sshHostPrivateKeyFileNameSh} ${linuxSshdKeysDirNameSh}
+                  ${sshUserPublicKeyFileNameSh} ${sshHostPrivateKeyFileNameSh} \
+                  ${linuxSshdKeysDirNameSh}
 
                 echo ${sshHostKeyAliasSh} "$(cat ${sshHostPublicKeyFileNameSh})" \
                 >${sshGlobalKnownHostsFileNameSh}
@@ -292,7 +308,9 @@ in
               chmod 'go+r' ${sshGlobalKnownHostsFileNameSh}
 
               # outside the block so non-root access may be enabled without recreating VM
-              ${optionalString cfg.permitNonRootSshAccess "chmod 'go+r' ${sshUserPrivateKeyFileNameSh}"}
+              ${optionalString cfg.permitNonRootSshAccess ''
+                chmod 'go+r' ${sshUserPrivateKeyFileNameSh}
+              ''}
 
               exec limactl start ${optionalString debugInsecurely "--debug"} --foreground ${vmNameSh}
             '';
