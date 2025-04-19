@@ -222,9 +222,36 @@ in
         system.activationScripts.postActivation.text =
           # apply "before" to work cooperatively with any other modules using this activation script
           mkBefore ''
-            rm -rf ${workingDirPathSh}
-            dscl . -delete ${userPathSh}
-            dscl . -delete ${groupPathSh}
+            if [ -d ${workingDirPathSh} ] ; then
+              printf >&2 'removing working directory %s...\n' ${workingDirPathSh}
+              rm -rf ${workingDirPathSh}
+            fi
+
+            if uid="$(id -u ${userSh} 2>'/dev/null')" ; then
+              if [ "$uid" -ne ${uidSh} ] ; then
+                printf >&2 \
+                  '\e[1;31merror: existing user: %s has unexpected UID: %s\e[0m\n' \
+                  ${userSh} \
+                  "$uid"
+                exit 1
+              fi
+              printf >&2 'deleting user %s...\n' ${userSh}
+              dscl . -delete ${userPathSh}
+            fi
+            unset 'uid'
+
+            if primaryGroupId="$(dscl . -read ${groupPathSh} 'PrimaryGroupID' 2>'/dev/null')" ; then
+              if [[ "$primaryGroupId" != *\ ${gidSh} ]] ; then
+                printf >&2 \
+                  '\e[1;31merror: existing group: %s has unexpected %s\e[0m\n' \
+                  ${groupSh} \
+                  "$primaryGroupId"
+                exit 1
+              fi
+              printf >&2 'deleting group %s...\n' ${groupSh}
+              dscl . -delete ${groupPathSh}
+            fi
+            unset 'primaryGroupId'
           '';
       })
       (mkIf cfg.enable {
