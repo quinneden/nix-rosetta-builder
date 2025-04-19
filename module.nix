@@ -212,7 +212,14 @@ in
     in
     mkMerge [
       (mkIf (!cfg.enable) {
-        system.activationScripts.extraActivation.text =
+        # This `postActivation` was chosen in particiular because it's one of the system level (as
+        # opposed to user level) ones that's been set aside for customization:
+        # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L121-L125
+        # And of those, it's the one that's executed after `activationScripts.launchd` which stops
+        # the VM:
+        # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L58-L66
+        # https://github.com/LnL7/nix-darwin/blob/a35b08d09efda83625bef267eb24347b446c80b8/modules/system/activation-scripts.nix#L66-L75
+        system.activationScripts.postActivation.text =
           # apply "before" to work cooperatively with any other modules using this activation script
           mkBefore ''
             rm -rf ${workingDirPathSh}
