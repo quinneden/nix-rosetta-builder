@@ -32,11 +32,11 @@ in
       default = true;
     };
 
-    potentiallyInsecureExtraConfig = mkOption {
+    potentiallyInsecureExtraNixosModule = mkOption {
       type = types.attrs;
       default = { };
       description = ''
-        Extra configuration to pass to the VM.
+        Extra NixOS configuration module to pass to the VM.
         The VM's default configuration allows it to be securely used as a builder.  Some extra
         configuration changes may endager this security and allow compromised deriviations into the
         host's Nix store.  Care should be taken to think through the implications of any extra
@@ -140,7 +140,7 @@ in
         inherit debugInsecurely;
         onDemand = cfg.onDemand;
         onDemandLingerMinutes = cfg.onDemandLingerMinutes;
-        extraConfig = cfg.potentiallyInsecureExtraConfig;
+        potentiallyInsecureExtraNixosModule = cfg.potentiallyInsecureExtraNixosModule;
       };
 
       cfg = config.nix-rosetta-builder;
