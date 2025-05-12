@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    lix-module = {
+      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.93.0.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixos-generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -13,6 +17,7 @@
     {
       self,
       nixos-generators,
+      lix-module,
       nixpkgs,
     }:
     let
@@ -28,7 +33,12 @@
           default = image;
 
           image = pkgs.callPackage ./package.nix {
-            inherit linuxSystem nixos-generators nixpkgs;
+            inherit
+              linuxSystem
+              nixos-generators
+              lix-module
+              nixpkgs
+              ;
             # Optional: override default argument values passed to the derivation.
             # Many can also be accessed through the module.
           };

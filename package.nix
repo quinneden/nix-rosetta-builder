@@ -1,6 +1,7 @@
 {
   # dependencies
   nixos-generators,
+  lix-module,
   nixpkgs,
   # pkgs
   lib,
@@ -33,6 +34,8 @@ nixos-generators.nixosGenerate (
     format = imageFormat;
     modules = [
       {
+        imports = [ lix-module.nixosModules.default ];
+
         boot = {
           kernelParams = [ "console=tty0" ];
 
