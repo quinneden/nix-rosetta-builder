@@ -68,8 +68,8 @@ nixos-generators.nixosGenerate (
               "flakes"
               "nix-command"
             ];
-            min-free = "5G";
-            max-free = "7G";
+            # min-free = "5G";
+            # max-free = "7G";
             trusted-users = [ linuxUser ];
           };
         };
