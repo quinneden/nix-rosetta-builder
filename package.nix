@@ -12,7 +12,7 @@
   potentiallyInsecureExtraNixosModule ? { },
   onDemand ? false, # enable launchd socket activation
   onDemandLingerMinutes ? 180, # poweroff after 3 hours of inactivity
-  withRosetta ? true,
+  withRosetta ? false,
 }:
 nixos-generators.nixosGenerate (
   let
