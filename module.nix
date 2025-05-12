@@ -119,6 +119,14 @@ in
         The SSH port used by the VM.
       '';
     };
+
+    withRosetta = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Whether to enable Rosetta for the VM.
+      '';
+    };
   };
 
   config =
@@ -141,6 +149,7 @@ in
         onDemand = cfg.onDemand;
         onDemandLingerMinutes = cfg.onDemandLingerMinutes;
         potentiallyInsecureExtraNixosModule = cfg.potentiallyInsecureExtraNixosModule;
+        withRosetta = cfg.withRosetta;
       };
 
       cfg = config.nix-rosetta-builder;
@@ -202,7 +211,7 @@ in
           }
         ];
 
-        rosetta.enabled = true;
+        rosetta.enabled = cfg.withRosetta;
 
         ssh = {
           launchdSocketName = optionalString cfg.onDemand daemonSocketName;

@@ -104,7 +104,7 @@ nixos-generators.nixosGenerate (
 
         system = {
           disableInstallerTools = true;
-          stateVersion = "24.05";
+          stateVersion = "25.05";
         };
 
         # macOS' Virtualization framework's virtiofs implementation will grant any guest user access
