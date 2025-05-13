@@ -198,7 +198,7 @@ in
         images = [
           {
             # extension must match `imageFormat`
-            location = "${imageWithFinalConfig}/nixos.qcow2";
+            location = "${imageWithFinalConfig}/${imageWithFinalConfig.passthru.filePath}";
           }
         ];
 

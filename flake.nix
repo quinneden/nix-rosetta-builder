@@ -7,18 +7,13 @@
       url = "https://git.lix.systems/lix-project/nixos-module/archive/2.93.0.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
     {
-      self,
-      nixos-generators,
-      lix-module,
       nixpkgs,
+      lix-module,
+      self,
     }:
     let
       darwinSystem = "aarch64-darwin";
@@ -35,7 +30,6 @@
           image = pkgs.callPackage ./package.nix {
             inherit
               linuxSystem
-              nixos-generators
               lix-module
               nixpkgs
               ;
