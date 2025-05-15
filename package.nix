@@ -1,6 +1,5 @@
 {
   # dependencies
-  lix-module,
   nixpkgs,
   # pkgs
   lib,
@@ -32,8 +31,6 @@ let
     system = linuxSystem;
     modules = [
       {
-        imports = [ lix-module.nixosModules.default ];
-
         boot = {
           kernelParams = [ "console=tty0" ];
 
