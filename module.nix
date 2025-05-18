@@ -21,6 +21,7 @@ let
     mkIf
     mkMerge
     mkOption
+    optional
     optionalAttrs
     optionalString
     types
@@ -396,8 +397,7 @@ in
               ];
               systems = [
                 linuxSystem
-                "x86_64-linux"
-              ];
+              ] ++ optional cfg.withRosetta "x86_64-linux";
             }
           ];
 
